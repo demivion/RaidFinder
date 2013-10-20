@@ -1,0 +1,149 @@
+------------------------------------------------------------------------
+r57 | naifu | 2013-10-19 16:29:55 +0000 (Sat, 19 Oct 2013) | 1 line
+Changed paths:
+   A /tags/V1.3.4 (from /trunk:56)
+
+Tagging as V1.3.4
+------------------------------------------------------------------------
+r56 | naifu | 2013-10-19 16:29:35 +0000 (Sat, 19 Oct 2013) | 1 line
+Changed paths:
+   M /trunk/RiftAddon.toc
+   M /trunk/ui/pane/tabpane.lua
+
+added new event TabPaneChanged to the tabpane widget
+------------------------------------------------------------------------
+r54 | naifu | 2013-10-19 16:06:04 +0000 (Sat, 19 Oct 2013) | 1 line
+Changed paths:
+   M /trunk/RiftAddon.toc
+
+version number update
+------------------------------------------------------------------------
+r53 | naifu | 2013-10-19 08:25:00 +0000 (Sat, 19 Oct 2013) | 3 lines
+Changed paths:
+   M /trunk/tools/tools.lua
+   M /trunk/ui/grid/grid.lua
+   M /trunk/version/version.lua
+
+added optional error type paramater to EnKai.tools.error.display()
+added a check to grid if highlight color is same as special color
+removed an unneccessary print statement
+------------------------------------------------------------------------
+r51 | naifu | 2013-10-13 11:15:27 +0000 (Sun, 13 Oct 2013) | 7 lines
+Changed paths:
+   M /trunk/RiftAddon.toc
+   A /trunk/gfx/windowModernArrowDown.png
+   A /trunk/gfx/windowModernArrowRight.png
+   M /trunk/locales/localizationDE.lua
+   M /trunk/locales/localizationEN.lua
+   M /trunk/locales/localizationFR.lua
+   M /trunk/locales/localizationRU.lua
+   M /trunk/ui/form/combo.lua
+   M /trunk/ui/tooltip/itemTooltip.lua
+   M /trunk/ui/window/windowModern.lua
+   M /trunk/version/version.lua
+
+ui.itemTooltip nows displays required faction if nkItemLib info is provided
+added parameter check to ui.combobox:SetSelection()
+ui.windowModern now features autohide toggle. Activated through method ShowAutoHideToggle()
+ui.windowModern now features move toggle. Activated through method ShowMoveToggle()
+ui.windowModern now has new event .Closed indicating that the window was closed by the user
+ui.windowModern now has new event .Dragable indicating the the window's moveable state has changed (through move toggle)
+removed a print statement from version handler
+------------------------------------------------------------------------
+r49 | naifu | 2013-10-12 11:09:46 +0000 (Sat, 12 Oct 2013) | 6 lines
+Changed paths:
+   M /trunk/RiftAddon.toc
+   M /trunk/readme.odt
+   M /trunk/tools/tools.lua
+   M /trunk/ui/form/checkbox.lua
+   A /trunk/ui/form/radiobutton.lua
+   M /trunk/ui/ui.lua
+
+added new widget ui.radiobutton
+implemented new method AutoSizeLabel to checkbox widget
+added error message display method EnKai.tools.error.display()
+added error checks in EnKai.uiCreateFrame()
+further updated documentation
+did some cleanups
+------------------------------------------------------------------------
+r47 | naifu | 2013-10-11 15:28:31 +0000 (Fri, 11 Oct 2013) | 3 lines
+Changed paths:
+   M /trunk/RiftAddon.toc
+   M /trunk/locales/localizationDE.lua
+   M /trunk/locales/localizationEN.lua
+   M /trunk/locales/localizationFR.lua
+   M /trunk/locales/localizationRU.lua
+   M /trunk/strings/strings.lua
+   M /trunk/ui/window/windowModern.lua
+   A /trunk/version
+   A /trunk/version/version.lua
+
+new version check routines
+windowModern will no longer show if mouse is over body part in autohide mode, will only pop up if mouse goes over title bar
+added method EnKai.strings.right
+------------------------------------------------------------------------
+r45 | naifu | 2013-10-11 06:51:54 +0000 (Fri, 11 Oct 2013) | 4 lines
+Changed paths:
+   M /trunk
+   M /trunk/RiftAddon.toc
+   M /trunk/fx/fx.lua
+   M /trunk/ui/button/actionbutton.lua
+   M /trunk/ui/window/windowModern.lua
+
+added new fx method pauseEffect() to pause an effect
+actionButton will only set restriced mode if a macro is being set
+windowModern will now check for move outside of top/bottom boundaries
+windowModern will now move title bar to bottom if moved to bottom of screen
+------------------------------------------------------------------------
+r43 | naifu | 2013-10-10 07:47:02 +0000 (Thu, 10 Oct 2013) | 4 lines
+Changed paths:
+   M /trunk/RiftAddon.toc
+   M /trunk/strings/strings.lua
+   M /trunk/ui/form/combo.lua
+   M /trunk/ui/window/windowModern.lua
+
+combo widget now supports method SetHeight()
+windowModern window now support method SetTitleAlign()
+fixed layer issue of title and body in windowModern
+added strings.formatNumber() method
+------------------------------------------------------------------------
+r41 | naifu | 2013-10-09 15:00:59 +0000 (Wed, 09 Oct 2013) | 1 line
+Changed paths:
+   M /trunk/RiftAddon.toc
+   A /trunk/gfx/shopCurrency.png
+   M /trunk/readme.odt
+   M /trunk/ui/tooltip/itemTooltip.lua
+
+itemTooltip enhancements
+------------------------------------------------------------------------
+r39 | naifu | 2013-10-07 16:58:05 +0000 (Mon, 07 Oct 2013) | 2 lines
+Changed paths:
+   M /trunk/RiftAddon.toc
+   A /trunk/readme.odt
+   M /trunk/ui/button/button.lua
+   M /trunk/ui/form/checkbox.lua
+   M /trunk/ui/grid/grid.lua
+
+included first version api documentation
+some minor fixes
+------------------------------------------------------------------------
+r37 | naifu | 2013-10-06 13:13:37 +0000 (Sun, 06 Oct 2013) | 1 line
+Changed paths:
+   M /trunk/RiftAddon.toc
+   M /trunk/ui/grid/grid.lua
+
+fixes for grid:SetBodyHighlightColor and grid:SetLabelHighlightColor
+------------------------------------------------------------------------
+r35 | naifu | 2013-10-02 16:02:54 +0000 (Wed, 02 Oct 2013) | 1 line
+Changed paths:
+   M /trunk/items/items.lua
+
+fixed issue with nil ID in EnKai.items.translateRiftCategory
+------------------------------------------------------------------------
+r34 | naifu | 2013-10-02 16:00:33 +0000 (Wed, 02 Oct 2013) | 1 line
+Changed paths:
+   M /trunk/RiftAddon.toc
+   M /trunk/ui/grid/gridCell.lua
+
+Fixed wrong texture type
+------------------------------------------------------------------------

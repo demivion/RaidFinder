@@ -1,0 +1,71 @@
+Identifier = "EnKai"
+Name = "EnKai Library"
+Description = "What makes all of the nkAddons work. An extensive lib with tons of reusable and helpfull goodies."
+
+Author = "Naifu"
+Email = "naifukishi@gmail.com"
+
+Version = "1.3.4"
+Environment = "2.4"
+
+RunOnStartup = {
+  "main.lua",
+  "locales/localizationDE.lua",
+  "locales/localizationFR.lua",
+  "locales/localizationEN.lua",
+  "locales/localizationRU.lua",    
+  "coroutines/coroutines.lua",
+  "db/db.lua",
+  "doc/doc.lua",
+  "events/events.lua",
+  "fx/fx.lua",
+  "items/items.lua",
+  "strings/strings.lua",
+  "tools/tools.lua",
+  "ui/ui.lua",
+  "ui/button/actionbutton.lua",  
+  "ui/button/button.lua",
+  "ui/form/checkbox.lua",
+  "ui/form/combo.lua",
+  "ui/form/radiobutton.lua",
+  "ui/form/slider.lua",
+  "ui/form/textfield.lua",
+  "ui/grid/grid.lua",
+  "ui/grid/gridCell.lua",
+  "ui/grid/gridHeaderCell.lua",
+  "ui/image/imagegallery.lua",
+  "ui/menu/menu.lua",
+  "ui/menu/menuEntry.lua",  
+  "ui/pane/scrollbox.lua",
+  "ui/pane/scrollpane.lua",
+  "ui/pane/tabpane.lua",
+  "ui/tooltip/infoText.lua",
+  "ui/tooltip/itemTooltip.lua",
+  "ui/tooltip/tooltip.lua",   
+  "ui/window/dialog.lua",
+  "ui/window/window.lua",
+  "ui/window/windowModern.lua",
+  "manager/manager.lua",
+  "version/version.lua",
+  "zip/encdec.lua",
+  "zip/zip.lua"
+}
+
+Embed = {
+	["LibAsyncTextures"] = true,
+}
+
+Dependencies = {
+	LibAsyncTextures = {"required", "before"},	
+}
+
+SavedVariables = {
+  nkManagerSettings = "account",
+  EnKaiSetup = "account",
+}
+
+
+-- X-Curse-Packaged-Version: V1.3.4
+-- X-Curse-Project-Name: EnKai
+-- X-Curse-Project-ID: enkai
+-- X-Curse-Repository-ID: rift/enkai/mainline

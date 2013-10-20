@@ -1,0 +1,27 @@
+Identifier = "RaidFinder"
+Name = "RaidFinder"
+NameShort = "RF"
+Description = "A Raid Finder"
+Author = "Vexxx@Greybriar"
+Website = "http://rift.curseforge.com"
+Version = ".01"
+Email = "email@email.com"
+Environment = "2.4"
+
+RunOnStartup = {
+	"raidfinder.lua",
+}
+
+Embed = {
+	["lib/nkGenie"] = true,
+	["lib/EnKai"] = true,
+}
+
+Dependencies = {
+	nkGenie = {"required", "before"},
+	EnKai = {"required", "before"},
+}
+
+SavedVariables = {
+  rfsettings = "character",
+}

@@ -1,0 +1,63 @@
+------------------------------------------------------------------------
+r42 | naifu | 2013-10-09 15:01:23 +0000 (Wed, 09 Oct 2013) | 1 line
+Changed paths:
+   A /tags/V1.2.10 (from /trunk:41)
+
+Tagging as V1.2.10
+------------------------------------------------------------------------
+r41 | naifu | 2013-10-09 15:00:59 +0000 (Wed, 09 Oct 2013) | 1 line
+Changed paths:
+   M /trunk/RiftAddon.toc
+   A /trunk/gfx/shopCurrency.png
+   M /trunk/readme.odt
+   M /trunk/ui/tooltip/itemTooltip.lua
+
+itemTooltip enhancements
+------------------------------------------------------------------------
+r39 | naifu | 2013-10-07 16:58:05 +0000 (Mon, 07 Oct 2013) | 2 lines
+Changed paths:
+   M /trunk/RiftAddon.toc
+   A /trunk/readme.odt
+   M /trunk/ui/button/button.lua
+   M /trunk/ui/form/checkbox.lua
+   M /trunk/ui/grid/grid.lua
+
+included first version api documentation
+some minor fixes
+------------------------------------------------------------------------
+r37 | naifu | 2013-10-06 13:13:37 +0000 (Sun, 06 Oct 2013) | 1 line
+Changed paths:
+   M /trunk/RiftAddon.toc
+   M /trunk/ui/grid/grid.lua
+
+fixes for grid:SetBodyHighlightColor and grid:SetLabelHighlightColor
+------------------------------------------------------------------------
+r35 | naifu | 2013-10-02 16:02:54 +0000 (Wed, 02 Oct 2013) | 1 line
+Changed paths:
+   M /trunk/items/items.lua
+
+fixed issue with nil ID in EnKai.items.translateRiftCategory
+------------------------------------------------------------------------
+r34 | naifu | 2013-10-02 16:00:33 +0000 (Wed, 02 Oct 2013) | 1 line
+Changed paths:
+   M /trunk/RiftAddon.toc
+   M /trunk/ui/grid/gridCell.lua
+
+Fixed wrong texture type
+------------------------------------------------------------------------
+r32 | naifu | 2013-09-08 09:02:07 +0000 (Sun, 08 Sep 2013) | 3 lines
+Changed paths:
+   M /trunk/RiftAddon.toc
+   A /trunk/items
+   A /trunk/items/items.lua
+   M /trunk/locales/localizationDE.lua
+   M /trunk/locales/localizationEN.lua
+   M /trunk/locales/localizationFR.lua
+   M /trunk/locales/localizationRU.lua
+   M /trunk/ui/pane/scrollpane.lua
+   M /trunk/ui/tooltip/itemTooltip.lua
+
+- new item data handler
+- improved itemTooltip widget
+- widget scrollpane now has method SetColor to set scrollbox
+------------------------------------------------------------------------

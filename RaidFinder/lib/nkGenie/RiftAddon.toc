@@ -1,0 +1,34 @@
+Identifier = "nkGenie"
+Name = "nkGenie"
+Description = "Helper lib to build some UI elements the standard UI does not support"
+
+Author = "Naifu"
+Website = "nkaddons.blogspot.com"
+Email = "nkaddons@gmail.com"
+
+Version = "1.3.11"
+Environment = "1.7"
+
+RunOnStartup = {
+  "main.lua",
+  "button.lua",
+  "checkbox.lua",
+  "combo.lua",
+  "dialog.lua",
+  "frame.lua",
+  "grid.lua",
+  "itemtooltip.lua",
+  "menu.lua",
+  "radiobutton.lua",
+  "scrollbox.lua",
+  "slider.lua",
+  "tabpane.lua",
+  "text.lua",
+  "textfield.lua",
+  "texture.lua",
+  "window.lua"
+}
+-- X-Curse-Packaged-Version: V2.2.2
+-- X-Curse-Project-Name: nkAdvisor
+-- X-Curse-Project-ID: nkadvisor
+-- X-Curse-Repository-ID: rift/nkadvisor/mainline
