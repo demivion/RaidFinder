@@ -157,7 +157,7 @@ function rf.settings()
 		aButtonX = 0,
 		aButtonY = 0,
 		aButtonS = 1,
-		UIlock = true,
+		UIlock = false,
 		flash = true,
 		playerdata = {
 			name = "",
@@ -843,6 +843,7 @@ function rf.approve(type, name)
 					rf.send(name, compressed)	
 
 					rf.gridData.raidappdata[name].status = "Waiting on Invite..."
+					
 					
 					if rf.statusframe.raidgrid ~= nil then
 						rf.StatusgridUpdate(rf.UI.frame.paneStatusTab, rf.statusframe.raidgrid)
