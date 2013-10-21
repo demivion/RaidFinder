@@ -3,9 +3,9 @@ Name = "RaidFinder"
 NameShort = "RF"
 Description = "A Raid Finder"
 Author = "Vexxx@Greybriar"
-Website = "http://rift.curseforge.com"
-Version = "1.0beta1"
-Email = "email@email.com"
+Website = "http://www.curse.com/addons/rift/raidfinder"
+Version = "1.0beta2"
+Email = "izlar@ufl.edu"
 Environment = "2.4"
 
 RunOnStartup = {
@@ -25,7 +25,3 @@ Dependencies = {
 SavedVariables = {
   rfsettings = "character",
 }
--- X-Curse-Packaged-Version: v1.0beta1
--- X-Curse-Project-Name: RaidFinder
--- X-Curse-Project-ID: raidfinder
--- X-Curse-Repository-ID: rift/raidfinder/mainline
