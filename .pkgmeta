@@ -1,0 +1,8 @@
+package-as: RaidFinder
+
+externals:
+    lib/EnKai:
+        url: svn://svn.curseforge.net/rift/enkai/mainline/trunk
+        tag: latest
+
+manual-changelog: CHANGELOG.txt
