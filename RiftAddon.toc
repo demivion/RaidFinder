@@ -4,7 +4,7 @@ NameShort = "RF"
 Description = "A Raid Finder"
 Author = "Vexxx@Greybriar"
 Website = "http://rift.curseforge.com"
-Version = ".01"
+Version = "1.0beta1"
 Email = "email@email.com"
 Environment = "2.4"
 
