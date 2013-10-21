@@ -5,7 +5,7 @@ Description = "What makes all of the nkAddons work. An extensive lib with tons o
 Author = "Naifu"
 Email = "naifukishi@gmail.com"
 
-Version = "1.3.4"
+Version = "1.3.5"
 Environment = "2.4"
 
 RunOnStartup = {
@@ -65,7 +65,7 @@ SavedVariables = {
 }
 
 
--- X-Curse-Packaged-Version: V1.3.4
+-- X-Curse-Packaged-Version: V1.3.5
 -- X-Curse-Project-Name: EnKai
 -- X-Curse-Project-ID: enkai
 -- X-Curse-Repository-ID: rift/enkai/mainline

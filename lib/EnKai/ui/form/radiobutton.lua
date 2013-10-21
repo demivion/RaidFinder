@@ -136,7 +136,7 @@ function EnKai.ui.nkRadioButton(name, parent)
 		labelColor = { r, g, b, a}
 		label:SetFontColor (r, g, b, a) 
 		for idx = 1, #checkboxes, 1 do
-			checkboxes[idx]:SetFontColor(r, g, b, a)
+			checkboxes[idx]:SetLabelColor(r, g, b, a)
 		end
 	end
 	

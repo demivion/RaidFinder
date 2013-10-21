@@ -25,3 +25,7 @@ Dependencies = {
 SavedVariables = {
   rfsettings = "character",
 }
+-- X-Curse-Packaged-Version: v1.0beta1
+-- X-Curse-Project-Name: RaidFinder
+-- X-Curse-Project-ID: raidfinder
+-- X-Curse-Repository-ID: rift/raidfinder/mainline

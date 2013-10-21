@@ -1106,9 +1106,14 @@ function rf.UI:setupPlayerTab()
 	local playerkey = nil
 
 	frame.applybutton:EventAttach(Event.UI.Input.Mouse.Left.Click, function ()
+		local playername = Inspect.Unit.Detail("player").name
+		local shard = Inspect.Shard().name
+		local name = (playername .. "@" .. shard)
+		
 		playerkey = frame.grid:GetKey(frame.grid:GetSelectedRow())
 
 		if playerkey == nil then print("You must select a player to invite.") return end
+		if playerkey == name then print("You can't invite yourself!") return end 
 		
 		rf.apply("player",playerkey)		
 		
@@ -1397,9 +1402,16 @@ function rf.UI:setupRaidTab()
 	local raidkey = nil
 	
 	frame.applybutton:EventAttach(Event.UI.Input.Mouse.Left.Click, function ()
+		local playername = Inspect.Unit.Detail("player").name
+		local shard = Inspect.Shard().name
+		local name = (playername .. "@" .. shard)
+		
+		 
+		
 		raidkey = frame.grid:GetKey(frame.grid:GetSelectedRow())
 	
 		if raidkey == nil then print("You must select a Raid to join.") return end
+		if raidkey == name then print("You can't invite yourself!") return end
 		
 		rf.apply("raid",raidkey)		
 		
@@ -2375,10 +2387,10 @@ function rf.UI:setupStatusTab()
 		local raidsel = frame.raidgrid:GetKey(frame.raidgrid:GetSelectedRow())
 		local name = ""
 		
-		if playersel == nil then 
+		if playersel == nil and raidsel ~= nil then 
 			seltype = "raid" 
 			name = raidsel
-		elseif raidsel == nil then 
+		elseif raidsel == nil and playersel ~= nil then 
 			seltype = "player"
 			name = playersel
 		end
