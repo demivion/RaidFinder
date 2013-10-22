@@ -4,15 +4,16 @@ local addonInfo, RaidFinder = ...
 local rf = RaidFinder
 
 rf.uiElements = {}
-
+--[[
 rf.uiElements.securecontext = UI.CreateContext("RaidFinderSecure")
 rf.uiElements.securecontext:SetStrata('dialog')
 rf.uiElements.securecontext:SetLayer(2)
 rf.uiElements.securecontext:SetSecureMode("restricted")
-
+--]]
 rf.uiElements.context = UI.CreateContext("RaidFinder")
-rf.uiElements.context:SetStrata('hud')
-rf.uiElements.context:SetLayer(1)
+--rf.uiElements.context:SetStrata('hud')
+--rf.uiElements.context:SetLayer(1)
+rf.uiElements.context:SetSecureMode("restricted")
 
 rf.needsbroadcast = false
 rf.needsupdate = {}
@@ -690,11 +691,11 @@ function rf.apply(type, name)
 		
 		rf.gridData.playerappdata[name] = rf.gridData.puggerdata[name]
 		
-		rf.gridData.playerappdata[name].status = "You Applied"
+		rf.gridData.playerappdata[name].status = "You Applied to Invite..."
 			
 		local data = rfsettings.raiddata
 		
-		data.status = "Wants to Invite"
+		data.status = "Join Raid?"
 		
 		data.type = "raidApplying"
 		local serialized = Utility.Serialize.Inline(data)
@@ -713,11 +714,11 @@ function rf.apply(type, name)
 		
 		rf.gridData.raidappdata[name] = rf.gridData.raiddata[name]
 				
-		rf.gridData.raidappdata[name].status = "You Applied"
+		rf.gridData.raidappdata[name].status = "You Applied to Join..."
 			
 		local data = rfsettings.playerdata
 		
-		data.status = "Wants to Join"
+		data.status = "Accept Player?"
 		
 		data.type = "playerApplying"
 		local serialized = Utility.Serialize.Inline(data)
@@ -741,10 +742,10 @@ function rf.deny(type, name)
 		
 			
 			
-		if rf.gridData.playerappdata[name].status ~= "Declined" and rf.gridData.playerappdata[name].status ~= "Ready for Invite!" then
+		if rf.gridData.playerappdata[name].status ~= "Declined." then
 			local data = rfsettings.raiddata
 			
-			data.status = "Declined"
+			data.status = "Declined."
 			
 			data.type = "raidApplying"
 			local serialized = Utility.Serialize.Inline(data)
@@ -761,11 +762,11 @@ function rf.deny(type, name)
 	end
 	
 	elseif type == "raid" then
-		if rf.gridData.raidappdata[name].status ~= "Declined" and rf.gridData.raidappdata[name].status ~= "Waiting on Invite..." then
+		if rf.gridData.raidappdata[name].status ~= "Declined." then
 			
 			local data = rfsettings.playerdata
 			
-			data.status = "Declined"
+			data.status = "Declined."
 			
 			data.type = "playerApplying"
 			local serialized = Utility.Serialize.Inline(data)
@@ -790,11 +791,11 @@ function rf.approve(type, name)
 
 			
 
-		if rf.gridData.playerappdata[name].status == "Wants to Join" then
+		if rf.gridData.playerappdata[name].status == "Accept Player?" then
 
 			local data = rfsettings.raiddata
 			
-			data.status = "Accepted"
+			data.status = "Ready for Invite?"
 			
 			data.type = "raidApplying"
 			local serialized = Utility.Serialize.Inline(data)
@@ -806,10 +807,12 @@ function rf.approve(type, name)
 		
 		rf.gridData.playerappdata[name].status = "Confirming..."
 
-		elseif rf.gridData.playerappdata[name].status == "Ready for Invite!" then
+		elseif rf.gridData.playerappdata[name].status == "Ready for Invite!" or rf.gridData.playerappdata[name].status == "Invite Sent." then
 
 		
 		rf.macro = ("i " .. name)
+		
+		rf.gridData.playerappdata[name].status = "Invite Sent."
 		
 		end
 		
@@ -820,7 +823,7 @@ function rf.approve(type, name)
 	
 	elseif type == "raid" then
 
-		if rf.gridData.raidappdata[name].status == "Wants to Invite" or rf.gridData.raidappdata[name].status == "Accepted" then
+		if rf.gridData.raidappdata[name].status == "Ready for Invite?" or rf.gridData.raidappdata[name].status == "Join Raid?"  then
 
 			if rf.dialog == false then
 				rf.UI.dialog = EnKai.ui.nkDialog("inviteconfirm", rf.uiElements.context)
@@ -963,7 +966,7 @@ function rf.open()
 	end
 	rf.visible = true
 	rf.uiElements.window:SetVisible(true)
-	if rf.secure ~= true then rf.uiElements.securecontext:SetVisible(true) end
+	if rf.secure ~= true and rf.UI.frame.paneStatusTab.approveButton ~= nil then rf.UI.frame.paneStatusTab.approveButton:SetVisible(true) end
 	
 	if rf.activetab == 4 then rf.flashing = false end
 	
@@ -972,7 +975,7 @@ end
 function rf.UI:closeUI()
 	rf.visible = false
 	rf.uiElements.window:SetVisible(false)
-	if rf.secure ~= true then rf.uiElements.securecontext:SetVisible(false) end
+	if rf.secure ~= true and rf.UI.frame.paneStatusTab.approveButton ~= nil then rf.UI.frame.paneStatusTab.approveButton:SetVisible(false) end
 end
 
 function rf.UI:createUI()
@@ -984,7 +987,7 @@ function rf.UI:createUI()
 	rf.UI.frame:SetTitle(addonInfo.toc.Identifier .. ' v' .. addonInfo.toc.Version)
 	rf.UI.frame:SetPoint("CENTER", UIParent,"CENTER")
 	rf.UI.frame:SetDragable(true)
-	rf.UI.frame:SetCloseable(true)
+	rf.UI.frame:SetCloseable(false)
 	rf.UI.frame:SetVisible(true)																				
 																						
 	rf.UI.frame.panePostTab = UI.CreateFrame ('Frame', 'RFPostTab', rf.UI.frame)
@@ -2165,6 +2168,8 @@ function rf.UI:setupPostTab()
 	
 	frame.stopButton:EventAttach(Event.UI.Input.Mouse.Left.Click, function ()
 		rf.broadcasting = false
+		
+		print("Stopped All Posts")
 	end, "PostTabStop.Left.Click")	
 	
 	
@@ -2372,7 +2377,7 @@ function rf.UI:setupStatusTab()
 
 --approve
 
-	frame.approveButton = EnKai.ui.nkButton("RFstatusapprove", rf.uiElements.securecontext)
+	frame.approveButton = EnKai.ui.nkButton("RFstatusapprove", rf.uiElements.context)
 	frame.approveButton:SetText("Approve/Invite")
 	frame.approveButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, -5)
 	frame.approveButton:SetColor(.42, .84, .42, 1)
@@ -2399,7 +2404,7 @@ function rf.UI:setupStatusTab()
 		
 		rf.approve(seltype,name)
 		frame.approveButton:EventMacroSet(Event.UI.Input.Mouse.Left.Click, rf.macro)
-		
+		rf.macro = ""
 	end, 'RFstatusapprove.Clicked')	
 	
 	
@@ -2459,8 +2464,7 @@ function rf.StatusgridUpdate(frame, grid)
 			table.insert (thisValue, {key = k, value = v.status, color = {1,1,1,1}})
 			
 			table.insert (thisValue, {key = k, value = v.time, color = {1,1,1,1}})
-
-			table.insert (values, thisValue)
+			if v.status ~= nil and v.status ~= "Declined." then	table.insert (values, thisValue) end
 		end
 
 	elseif grid == frame.raidgrid then
@@ -2503,7 +2507,7 @@ function rf.StatusgridUpdate(frame, grid)
 			
 			table.insert (thisValue, {key = k, value = v.time, color = {1,1,1,1}})
 
-			table.insert (values, thisValue)
+			if v.status ~= nil and v.status ~= "Declined." then	table.insert (values, thisValue) end
 		end
 
 	else
