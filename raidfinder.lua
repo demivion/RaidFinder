@@ -28,7 +28,6 @@ rf.raidframe = {}
 rf.statusframe = {}
 rf.secure = false
 rf.flashing = false
-rf.macro = ""
 rf.activetab = 0
 rf.dialog = false
 
@@ -275,8 +274,10 @@ function rf.flashs()
 	if rf.activetab == 4 and rf.visible == true then rf.flashing = false end
 	if rf.flashing then
 		rf.UI.flashtexture:SetAlpha(math.abs(math.sin(string.sub(string.format("%.1f",Inspect.Time.Frame()), -3))))
+		Command.System.Flash(true)
 	else
 		rf.UI.flashtexture:SetAlpha(0)
+		Command.System.Flash(false)
 	end
 end
 
@@ -785,7 +786,7 @@ function rf.deny(type, name)
 end
 
 function rf.approve(type, name)
-
+	
 	if type == "player" then
 		
 
@@ -810,8 +811,9 @@ function rf.approve(type, name)
 		elseif rf.gridData.playerappdata[name].status == "Ready for Invite!" or rf.gridData.playerappdata[name].status == "Invite Sent." then
 
 		
-		rf.macro = ("i " .. name)
-		
+		local macro = ("invite " .. name)
+		print(macro)
+		rf.UI.frame.paneStatusTab.approveButton:EventMacroSet(Event.UI.Input.Mouse.Left.Click, macro)
 		rf.gridData.playerappdata[name].status = "Invite Sent."
 		
 		end
@@ -820,46 +822,26 @@ function rf.approve(type, name)
 
 			rf.StatusgridUpdate(rf.UI.frame.paneStatusTab, rf.statusframe.grid)	
 		end
+		
+		
 	
 	elseif type == "raid" then
 
 		if rf.gridData.raidappdata[name].status == "Ready for Invite?" or rf.gridData.raidappdata[name].status == "Join Raid?"  then
+			local data = rfsettings.playerdata
 
-			if rf.dialog == false then
-				rf.UI.dialog = EnKai.ui.nkDialog("inviteconfirm", rf.uiElements.context)
-				rf.UI.dialog:SetType("confirm")
-				rf.UI.dialog:SetMessage("Are you 100% ready for an invite? If you are already in a group leave now.")
-				rf.UI.dialog:SetLayer(10)
-				rf.UI.dialog:SetWidth(320)
-				rf.UI.dialog:SetHeight(200)
+			data.status = "Ready for Invite!"
+
+			data.type = "playerApplying"
+			local serialized = Utility.Serialize.Inline(data)
+			local compressed = zlib.deflate()(serialized, "finish")
+
+			rf.send(name, compressed)	
+
+			rf.gridData.raidappdata[name].status = "Waiting on Invite..."
 	
-				Command.Event.Attach(EnKai.events['inviteconfirm'].LeftButtonClicked, function ()
-	
-					local data = rfsettings.playerdata
-
-					data.status = "Ready for Invite!"
-
-					data.type = "playerApplying"
-					local serialized = Utility.Serialize.Inline(data)
-					local compressed = zlib.deflate()(serialized, "finish")
-
-					rf.send(name, compressed)	
-
-					rf.gridData.raidappdata[name].status = "Waiting on Invite..."
-					
-					
-					if rf.statusframe.raidgrid ~= nil then
-						rf.StatusgridUpdate(rf.UI.frame.paneStatusTab, rf.statusframe.raidgrid)
-					end
-					
-				end, 'inviteconfirm.LeftButtonClicked')
-				
-				rf.dialog = true
-				
-			else
 			
-				rf.UI.dialog:SetVisible(true)
-			end
+			rf.UI.frame.paneStatusTab.dialog:SetVisible(true)
 			
 			
 			
@@ -870,6 +852,8 @@ function rf.approve(type, name)
 		end
 		
 	end
+	
+	
 
 end
 
@@ -988,7 +972,18 @@ function rf.UI:createUI()
 	rf.UI.frame:SetPoint("CENTER", UIParent,"CENTER")
 	rf.UI.frame:SetDragable(true)
 	rf.UI.frame:SetCloseable(false)
-	rf.UI.frame:SetVisible(true)																				
+	rf.UI.frame:SetVisible(true)		
+
+	rf.UI.frame.closeButton = UI.CreateFrame('Texture', 'MainClose', rf.UI.frame)
+	rf.UI.frame.closeButton:SetTextureAsync('RaidFinder', 'lib/EnKai/gfx/btnClose.png')
+	--rf.UI.frame.closeButton:SetText("Close")
+	rf.UI.frame.closeButton:SetPoint("TOPRIGHT", rf.UI.frame, "TOPRIGHT", -12, 18)
+	rf.UI.frame.closeButton:SetLayer(2)
+	
+	rf.UI.frame.closeButton:EventAttach(Event.UI.Input.Mouse.Left.Click, function ()
+		rf.UI.closeUI()
+	end, "RaidTabClose.Left.Click")
+	
 																						
 	rf.UI.frame.panePostTab = UI.CreateFrame ('Frame', 'RFPostTab', rf.UI.frame)
 	rf.UI.frame.paneRaidTab = UI.CreateFrame ('Frame', 'RFRaidTab', rf.UI.frame)
@@ -2375,6 +2370,7 @@ function rf.UI:setupStatusTab()
 
 	end, 'RFstatusdeny.Clicked')
 
+
 --approve
 
 	frame.approveButton = EnKai.ui.nkButton("RFstatusapprove", rf.uiElements.context)
@@ -2387,7 +2383,9 @@ function rf.UI:setupStatusTab()
 	
 	
 	
-	Command.Event.Attach(EnKai.events['RFstatusapprove'].Clicked, function ()		
+	
+	Command.Event.Attach(EnKai.events['RFstatusapprove'].Clicked, function ()
+		rf.UI.frame.paneStatusTab.approveButton:EventMacroSet(Event.UI.Input.Mouse.Left.Click, "")
 		local seltype = ""
 		local playersel = frame.grid:GetKey(frame.grid:GetSelectedRow())
 		local raidsel = frame.raidgrid:GetKey(frame.raidgrid:GetSelectedRow())
@@ -2399,13 +2397,23 @@ function rf.UI:setupStatusTab()
 		elseif raidsel == nil and playersel ~= nil then 
 			seltype = "player"
 			name = playersel
+		else
+
 		end
 		if name == "" then print("You must select a player first.") return end
 		
 		rf.approve(seltype,name)
-		frame.approveButton:EventMacroSet(Event.UI.Input.Mouse.Left.Click, rf.macro)
-		rf.macro = ""
+		
+
 	end, 'RFstatusapprove.Clicked')	
+	
+	frame.dialog = EnKai.ui.nkDialog("inviteconfirm", rf.uiElements.context)
+	frame.dialog:SetType("confirm")
+	frame.dialog:SetMessage("Are you 100% ready for an invite? If you are already in a group leave now.")
+	frame.dialog:SetLayer(10)
+	frame.dialog:SetWidth(320)
+	frame.dialog:SetHeight(200)
+	frame.dialog:SetVisible(false)
 	
 	
 	--close
@@ -2853,7 +2861,7 @@ function rf.RaidgridUpdate(frame, grid)
 	
 	grid:SetRowPos(1, false)
 	grid:SetCellValues(values)
-	
+
 	maxCount = #values
 
 		
