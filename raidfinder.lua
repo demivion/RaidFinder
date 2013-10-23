@@ -682,7 +682,7 @@ end
 function rf.send(name, data)
 
 	
-	Command.Message.Send(name, "raidfinder", data, (function(failure, message) --[[ print(failure) print(message)--]] end))
+	Command.Message.Broadcast("tell", name, "raidfinder", data)
 end
 
 function rf.apply(type, name)
