@@ -30,6 +30,7 @@ rf.secure = false
 rf.flashing = false
 rf.activetab = 0
 rf.dialog = false
+rf.debug = false
 
 RaidFinder.gridData = {
 	headers = {	
@@ -662,7 +663,7 @@ function rf.broadcast(data)
 
 	local channel = "channel"
 	local shard = Inspect.Shard().name
-
+	
 
 	if ((shard == "Greybriar") or (shard == "Seastone") or (shard == "Deepwood") or (shard == "Hailol")) then
 			channel = "CrossEvents@Faeblight"
@@ -681,8 +682,29 @@ end
 
 function rf.send(name, data)
 
+	local shard = Inspect.Shard().name
+	local nameshard = string.match(name, "%a+", string.find(name, "%@"))
+	local failed
+	local nameclean
 	
-	Command.Message.Broadcast("tell", name, "raidfinder", data)
+	
+	if nameshard == shard then
+		nameclean = string.match(name, "%a+")
+	else
+		nameclean = name
+	end
+	
+	if rf.debug then 
+	print("player send = ",nameclean)
+	end
+	
+	Command.Message.Broadcast("tell", nameclean, "raidfinder", data, function(failure, message) failed = failure if rf.debug then print("broadcast", failure, message) end end)
+	
+	if failed then
+		Command.Message.Send(nameclean, "raidfinder", data, function(failure, message) if rf.debug then print("send", failure, message) end end)
+	end
+	
+	
 end
 
 function rf.apply(type, name)
@@ -691,19 +713,20 @@ function rf.apply(type, name)
 		rf.raiddata()
 		
 		rf.gridData.playerappdata[name] = rf.gridData.puggerdata[name]
-		
-		rf.gridData.playerappdata[name].status = "You Applied to Invite..."
+		if rf.gridData.playerappdata[name].status ~= "You Applied to Invite..." then
+			rf.gridData.playerappdata[name].status = "You Applied to Invite..."
+				
+			local data = rfsettings.raiddata
 			
-		local data = rfsettings.raiddata
+			data.status = "Join Raid?"
+			
+			data.type = "raidApplying"
+			local serialized = Utility.Serialize.Inline(data)
+			local compressed = zlib.deflate()(serialized, "finish")
+			print("Applied!")
 		
-		data.status = "Join Raid?"
-		
-		data.type = "raidApplying"
-		local serialized = Utility.Serialize.Inline(data)
-		local compressed = zlib.deflate()(serialized, "finish")
-		print("Applied!")
-	
-		rf.send(name, compressed)	
+			rf.send(name, compressed)	
+		end
 		
 	if rf.statusframe.grid ~= nil then
 		rf.StatusgridUpdate(rf.UI.frame.paneStatusTab, rf.statusframe.grid)	
@@ -714,19 +737,20 @@ function rf.apply(type, name)
 		rf.playerdata()
 		
 		rf.gridData.raidappdata[name] = rf.gridData.raiddata[name]
+		if rf.gridData.raidappdata[name].status ~= "You Applied to Join..." then
+			rf.gridData.raidappdata[name].status = "You Applied to Join..."
 				
-		rf.gridData.raidappdata[name].status = "You Applied to Join..."
+			local data = rfsettings.playerdata
 			
-		local data = rfsettings.playerdata
+			data.status = "Accept Player?"
+			
+			data.type = "playerApplying"
+			local serialized = Utility.Serialize.Inline(data)
+			local compressed = zlib.deflate()(serialized, "finish")
+			print("Applied!")
 		
-		data.status = "Accept Player?"
-		
-		data.type = "playerApplying"
-		local serialized = Utility.Serialize.Inline(data)
-		local compressed = zlib.deflate()(serialized, "finish")
-		print("Applied!")
-	
-		rf.send(name, compressed)	
+			rf.send(name, compressed)
+		end
 		
 		if rf.statusframe.raidgrid ~= nil then
 			rf.StatusgridUpdate(rf.UI.frame.paneStatusTab, rf.statusframe.raidgrid)
@@ -812,7 +836,7 @@ function rf.approve(type, name)
 
 		
 		local macro = ("invite " .. name)
-		print(macro)
+		if rf.debug then print(macro) end
 		rf.UI.frame.paneStatusTab.approveButton:EventMacroSet(Event.UI.Input.Mouse.Left.Click, macro)
 		rf.gridData.playerappdata[name].status = "Invite Sent."
 		
@@ -885,6 +909,7 @@ function rf.receive(from, type, channel, identifier, incoming)
 											note = data.note,
 											time = now
 											}
+			
 		elseif data.type == "raid" then
 
 			rf.gridData.raiddata[data.name] = {
@@ -911,7 +936,7 @@ function rf.receive(from, type, channel, identifier, incoming)
 											time = now,
 											status = data.status,
 											}
-
+					if rf.debug then print(data.name, "status =", rf.gridData.raidappdata[data.name].status) end
 											
 		elseif data.type == "playerApplying" then
 					if rf.gridData.playerappdata[data.name] == nil and rfsettings.flash then 
@@ -931,6 +956,8 @@ function rf.receive(from, type, channel, identifier, incoming)
 											time = now,
 											status = data.status,
 											}
+					if rf.debug then print(data.name, "status =", rf.gridData.playerappdata[data.name].status) end						
+											
 		end
 		
 
@@ -1734,9 +1761,10 @@ function rf.UI:setupPostTab()
 	frame.hittext = UI.CreateFrame("Text", "RFplayerhittext", frame.PostPlayerBG:getElement())
 	
 	frame.hittext:SetPoint("TOPLEFT", frame.hithead, "TOPRIGHT", 5, 0)
-	frame.hittext:SetText(tostring(rfsettings.playerdata.hit))
+	frame.hittext:SetText(tostring(Inspect.Stat("hitUnbuffed")))
 	frame.hittext:SetFontSize(14)
 	frame.hittext:SetFontColor(1, 1, 1, 1)
+	
 	
 	frame.rolehead = UI.CreateFrame("Text", "RFpostplayerrole", frame.PostPlayerBG:getElement())
 	
@@ -1980,7 +2008,15 @@ function rf.UI:setupPostTab()
 	frame.btPlayerPost:SetHeight(25)
 	frame.btPlayerPost:SetPoint ("BOTTOMRIGHT", frame.PostPlayerBG:getElement(), "BOTTOMRIGHT", -10, -20)
 	
-	frame.btPlayerPost:EventAttach(Event.UI.Input.Mouse.Left.Click, function (self)	rf.playerpost()	end, "RFPlayerPost.Left.Click")	
+	frame.btPlayerPost:EventAttach(Event.UI.Input.Mouse.Left.Click, function (self)
+	
+	frame.exptext:SetText("[" .. (rfsettings.playerdata.achiev.tdq + rfsettings.playerdata.achiev.ft + rfsettings.playerdata.achiev.ee) .. "/13]" .. "[" .. (rfsettings.playerdata.achiev.ga + rfsettings.playerdata.achiev.ig + rfsettings.playerdata.achiev.pb) .. "/12]")
+	frame.hittext:SetText(tostring(Inspect.Stat("hitUnbuffed")))
+	rf.playerdata()
+	rf.playerpost()	
+	
+	
+	end, "RFPlayerPost.Left.Click")	
 	
 	frame.playerPostLabel = UI.CreateFrame ('Text', 'playerPostLabel', frame.btPlayerPost)
 	
@@ -2137,7 +2173,7 @@ function rf.UI:setupPostTab()
 	frame.btRaidPost:SetPoint ("BOTTOMRIGHT", frame.PostRaidBG:getElement(), "BOTTOMRIGHT", -10, -20)
 	
 	
-	frame.btRaidPost:EventAttach(Event.UI.Input.Mouse.Left.Click, function (self)	rf.raidpost()	end, "RFRaidPost.Left.Click")										
+	frame.btRaidPost:EventAttach(Event.UI.Input.Mouse.Left.Click, function (self)	rf.playerdata() rf.raidpost()	end, "RFRaidPost.Left.Click")										
 
 	frame.raidPostLabel = UI.CreateFrame ('Text', 'playerPostLabel', frame.btRaidPost)
 	
@@ -2472,7 +2508,11 @@ function rf.StatusgridUpdate(frame, grid)
 			table.insert (thisValue, {key = k, value = v.status, color = {1,1,1,1}})
 			
 			table.insert (thisValue, {key = k, value = v.time, color = {1,1,1,1}})
-			if v.status ~= nil and v.status ~= "Declined." then	table.insert (values, thisValue) end
+			if v.status ~= nil and v.status ~= "Declined." then	
+				table.insert (values, thisValue)
+			else
+				rf.gridData.playerappdata[v.name] = nil
+			end
 		end
 
 	elseif grid == frame.raidgrid then
@@ -2515,7 +2555,11 @@ function rf.StatusgridUpdate(frame, grid)
 			
 			table.insert (thisValue, {key = k, value = v.time, color = {1,1,1,1}})
 
-			if v.status ~= nil and v.status ~= "Declined." then	table.insert (values, thisValue) end
+			if v.status ~= nil and v.status ~= "Declined." then
+				table.insert (values, thisValue)
+			else
+				rf.gridData.raidappdata[v.name] = nil
+			end
 		end
 
 	else
@@ -2542,6 +2586,8 @@ end
 
 function rf.lookingforupdate(frame)
 
+
+
 	--player
 	
 	rfsettings.playerdata.lookingfor.tdq = frame.LFTDQ:GetChecked()
@@ -2566,6 +2612,9 @@ function rf.lookingforupdate(frame)
 	rfsettings.playerdata.roles.support = frame.support:GetChecked()
 	
 	rfsettings.playerdata.note = frame.notetext:GetText()
+	
+	frame.hittext:SetText(tostring(Inspect.Stat("hitUnbuffed")))
+	frame.exptext:SetText("[" .. (rfsettings.playerdata.achiev.tdq + rfsettings.playerdata.achiev.ft + rfsettings.playerdata.achiev.ee) .. "/13]" .. "[" .. (rfsettings.playerdata.achiev.ga + rfsettings.playerdata.achiev.ig + rfsettings.playerdata.achiev.pb) .. "/12]")
 	
 	--raid
 	
@@ -2598,7 +2647,7 @@ function rf.PlayergridUpdate(frame, grid)
 		local currenttime = Inspect.Time.Frame()
 		
 		for k,v in pairs(rawcontent) do
-			if (currenttime - v.time) <= 30 then
+			if (currenttime - v.time) <= 20 then
 				content[k] = rawcontent[k]
 			else
 				rawcontent[k] = nil
@@ -2752,7 +2801,7 @@ function rf.RaidgridUpdate(frame, grid)
 		local currenttime = Inspect.Time.Frame()
 		
 		for k,v in pairs(rawcontent) do
-			if (currenttime - v.time) <= 30 then
+			if (currenttime - v.time) <= 20 then
 				content[k] = rawcontent[k]
 			else
 				rawcontent[k] = nil
@@ -2833,7 +2882,8 @@ function rf.RaidgridUpdate(frame, grid)
 					typelabel = rf.gridData.selection["Type"][k2].label
 				end
 			end
-				
+			
+			if typelabel == nil then typelabel = "" end
 			table.insert (thisValue, {key = k, value = typelabel, color = {1,1,1,1}})
 			
 			
@@ -2846,7 +2896,7 @@ function rf.RaidgridUpdate(frame, grid)
 			if v.roles.support == true then s = "S" end
 			
 			roleslist = (t .. h .. d .. s)
-		
+
 			table.insert (thisValue, {key = k, value = roleslist, color = {1,1,1,1}})
 
 			table.insert (thisValue, {key = k, value = v.note, color = {1,1,1,1}})
@@ -3099,7 +3149,8 @@ end
 
 function rf.testtable()
 
-	rf.flashing = true
+Command.Message.Send("Avness", "raidfinder", "data", function(failure, message) if rf.debug then print("send", failure, message) end end)
+
 --[[	rfsettings.playerdata.type = "player"
 	local data = rfsettings.playerdata
 
@@ -3127,6 +3178,8 @@ function rf.slash(params)
 		rf.open()
 	elseif args[0] == "test" and argnumber == 1	then
 		rf.broadcast(rf.broadcastdata)
+	elseif args[0] == "debug" and argnumber == 1	then
+		rf.debug = true
 	elseif args[0] == "testtable" and argnumber == 1	then
 		rf.testtable()
 	else
