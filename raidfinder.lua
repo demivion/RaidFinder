@@ -4,15 +4,7 @@ local addonInfo, RaidFinder = ...
 local rf = RaidFinder
 
 rf.uiElements = {}
---[[
-rf.uiElements.securecontext = UI.CreateContext("RaidFinderSecure")
-rf.uiElements.securecontext:SetStrata('dialog')
-rf.uiElements.securecontext:SetLayer(2)
-rf.uiElements.securecontext:SetSecureMode("restricted")
---]]
 rf.uiElements.context = UI.CreateContext("RaidFinder")
---rf.uiElements.context:SetStrata('hud')
---rf.uiElements.context:SetLayer(1)
 rf.uiElements.context:SetSecureMode("restricted")
 
 rf.needsbroadcast = false
@@ -31,6 +23,7 @@ rf.flashing = false
 rf.activetab = 0
 rf.dialog = false
 rf.debug = false
+rf.EU = nil
 
 RaidFinder.gridData = {
 	headers = {	
@@ -228,8 +221,12 @@ function rf.main(_, addon)
 	Event.System.Update.Begin[rf.updateindex][1] = rf.onupdate	
 	
 	Command.Message.Accept("channel", "raidfinder")
+	Command.Message.Accept("tell", "raidfinder")
 	
 	rf.UI:addonButton()
+	
+	--EnKai.version.init(addonInfo.toc.Identifier, addonInfo.toc.Version)
+	
 	end	
 	
 	
@@ -244,29 +241,46 @@ function rf.channelcheck()
 	local detail = {}
 	local crossevents = false
 	local shard = Inspect.Shard().name
+
 	
 	consoles = Inspect.Console.List()
 
 	for k,v in pairs(consoles) do
 		detail = Inspect.Console.Detail(k).channel
 		if detail ~= nil then
-		for k2,v2 in pairs(detail) do
+		
+			if (shard == 'Faeblight' or shard == 'Laethys' or shard == 'Hailol' or shard == 'Wolfsbane' or shard == 'Deepwood' or shard == 'Greybriar' or shard == 'Seastone') then rf.EU = false end
+			if (shard == 'Bloodiron' or shard == 'Brutwacht' or shard == 'Trübkopf' or shard == 'Brutmutter' or shard == 'Brisesol' or shard == 'Phynnious' or shard == 'Gelidra' or shard == 'Zaviel') then rf.EU = true end
+			
+			for k2,v2 in pairs(detail) do
 
-			if ((shard == 'Faeblight' or shard == 'Laethys') and k2 == 'CrossEvents' and v2 == true) then
-				crossevents = true
+				if ((shard == 'Faeblight' or shard == 'Brutwacht') and k2 == 'CrossEvents' and v2 == true) then
+					crossevents = true
 
-				break
-			elseif ((k2 == 'CrossEvents@Faeblight' or k2 == 'CrossEvents@Laethys') and v2 == true) then
-				crossevents = true
+					break
+				elseif (rf.EU == false and k2 == 'CrossEvents@Faeblight' and v2 == true) then
+					crossevents = true
 
-				break
-			else
-				
+					break
+				elseif (rf.EU == true and k2 == 'CrossEvents@Brutwacht' and v2 == true) then
+					crossevents = true
+
+					break
+				else
+					
+				end
 			end
 		end
-		else end
 	end
-	if crossevents == false then print("Please type /join CrossEvents@Faeblight") end
+	
+	if crossevents == false	then
+		if rf.EU == false then
+			print("Please type /join CrossEvents@Faeblight")
+		elseif rf.EU == true then
+			print("Please type /join CrossEvents@Brutwacht")
+		end
+	end
+	
 	return crossevents
 	
 end
@@ -628,8 +642,7 @@ function rf.playerpost()
 	
 	local serialized = Utility.Serialize.Inline(data)
 	local compressed = zlib.deflate()(serialized, "finish")
-	--local compressed = serialized
-	--size = Utility.Message.Size(data.name,"raidfinder",compressed)
+
 	print("Posted!")
 	
 	rf.broadcastdata = compressed
@@ -649,8 +662,7 @@ function rf.raidpost()
 	
 	local serialized = Utility.Serialize.Inline(data)
 	local compressed = zlib.deflate()(serialized, "finish")
-	--local compressed = serialized
-	--size = Utility.Message.Size(data.name,"raidfinder",compressed)
+	
 	print("Posted!")
 	
 	rf.broadcastdata = compressed
@@ -665,13 +677,12 @@ function rf.broadcast(data)
 	local shard = Inspect.Shard().name
 	
 
-	if ((shard == "Greybriar") or (shard == "Seastone") or (shard == "Deepwood") or (shard == "Hailol")) then
-			channel = "CrossEvents@Faeblight"
-		elseif shard == "Keenblade" then
-			print("Raid Finder does not work on Keenblade")
-		elseif (shard == "Faeblight" or shard == "Laethys") then
-			channel = "CrossEvents"
-		else channel = "CrossEvents@Laethys"
+	if (shard == "Faeblight" or shard == "Brutwacht") then
+		channel = "CrossEvents"
+	elseif rf.EU == false then
+		channel = "CrossEvents@Faeblight"
+	elseif rf.EU == true then
+		channel = "CrossEvents@Brutwacht"
 	end
 
 
@@ -684,7 +695,7 @@ function rf.send(name, data)
 
 	local shard = Inspect.Shard().name
 	local nameshard = string.match(name, "%a+", string.find(name, "%@"))
-	local failed
+	local failed = "none"
 	local nameclean
 	
 	
@@ -697,14 +708,60 @@ function rf.send(name, data)
 	if rf.debug then 
 	print("player send = ",nameclean)
 	end
+
+	rf.sendtest(nameclean,data,failed)
+
+end
+
+function rf.sendtest(vname, vdata, vfailed)
 	
-	Command.Message.Broadcast("tell", nameclean, "raidfinder", data, function(failure, message) failed = failure if rf.debug then print("broadcast", failure, message) end end)
-	
-	if failed then
-		Command.Message.Send(nameclean, "raidfinder", data, function(failure, message) if rf.debug then print("send", failure, message) end end)
+	if vfailed == "none" then
+		Command.Message.Broadcast("tell", vname, "raidfinder", vdata, function(failure, message)
+			if failure == true then
+				failed = "broadfailed"
+				rf.sendtest(vname,vdata,failed)
+			end
+			
+			if rf.debug then print("broadcast ", failure, " ", message) end 
+		end)
+			
+	elseif vfailed == "broadfailed" then
+		Command.Message.Send(vname, "raidfinder", vdata, function(failure, message)
+			if failure == true then
+				failed = "sendfailed"
+				rf.sendtest(vname,vdata,failed)
+			end
+			if rf.debug then print("send ", failure, " ", message) end
+		end)
+		
+	else
+		rf.failpost(vname, vdata)
 	end
+end
+
+function rf.failpost(name, incoming)
+	
+	if rf.channelcheck() == false then return end
+	local data = {}
+	
+	local decompressed = zlib.inflate()(incoming, "finish")
+	local deserialize = loadstring("return " .. decompressed)()
+
+		
+	data = deserialize
 	
 	
+	data.personal = name
+	
+	
+	local serialized = Utility.Serialize.Inline(data)
+	local compressed = zlib.deflate()(serialized, "finish")
+
+	if rf.debug then print("Sent Fail-safe mode. BAD!") end
+	
+	rf.broadcast(compressed)
+	
+
 end
 
 function rf.apply(type, name)
@@ -881,10 +938,12 @@ function rf.approve(type, name)
 
 end
 
-
-
 function rf.receive(from, type, channel, identifier, incoming)
 	local player = Inspect.Unit.Detail("player").name
+	local shard = Inspect.Shard().name
+	local name = (player .. "@" .. shard)
+	local accept = false
+	
 	local now = Inspect.Time.Frame()
 	if identifier == "raidfinder" then
 		local decompressed = zlib.inflate()(incoming, "finish")
@@ -896,72 +955,89 @@ function rf.receive(from, type, channel, identifier, incoming)
 		
 		local data = deserialize
 		
-		
-		if data.type == "player" then
-		
-			rf.gridData.puggerdata[data.name] = {
-											name = data.name,
-											hit = data.hit,
-											class = data.class,
-											roles = {tank = data.roles.tank, dps = data.roles.dps, heal = data.roles.heal, support = data.roles.support},
-											achiev = {tdq = data.achiev.tdq, ft = data.achiev.ft, ee = data.achiev.ee, ga = data.achiev.ga, ig = data.achiev.ig, pb = data.achiev.pb},
-											lookingfor = data.lookingfor,
-											note = data.note,
-											time = now
-											}
-			
-		elseif data.type == "raid" then
-
-			rf.gridData.raiddata[data.name] = {
-											name = data.name,
-											raidtype = data.raidtype,
-											loot = data.loot,
-											roles = {tank = data.roles.tank, dps = data.roles.dps, heal = data.roles.heal, support = data.roles.support},
-											note = data.note,
-											time = now,
-											}
-											
-		elseif data.type == "raidApplying" then
-					if rf.gridData.raidappdata[data.name] == nil then
-						if rfsettings.flash then rf.flashing = true end
-					elseif rf.gridData.raidappdata[data.name].status ~= data.status then 
-						if rfsettings.flash then rf.flashing = true end
-					end
-					rf.gridData.raidappdata[data.name] = {
-											name = data.name,
-											type = data.raidtype,
-											loot = data.loot,
-											roles = {tank = data.roles.tank, dps = data.roles.dps, heal = data.roles.heal, support = data.roles.support},
-											note = data.note,
-											time = now,
-											status = data.status,
-											}
-					if rf.debug then print(data.name, "status =", rf.gridData.raidappdata[data.name].status) end
-											
-		elseif data.type == "playerApplying" then
-					if rf.gridData.playerappdata[data.name] == nil and rfsettings.flash then 
-						rf.flashing = true 
-					elseif rf.gridData.playerappdata[data.name].status ~= data.status and rfsettings.flash then 
-						rf.flashing = true
-					end
-					
-					rf.gridData.playerappdata[data.name] = {
-											name = data.name,
-											hit = data.hit,
-											class = data.class,
-											roles = {tank = data.roles.tank, dps = data.roles.dps, heal = data.roles.heal, support = data.roles.support},
-											achiev = {tdq = data.achiev.tdq, ft = data.achiev.ft, ee = data.achiev.ee, ga = data.achiev.ga, ig = data.achiev.ig, pb = data.achiev.pb},
-											lookingfor = data.lookingfor,
-											note = data.note,
-											time = now,
-											status = data.status,
-											}
-					if rf.debug then print(data.name, "status =", rf.gridData.playerappdata[data.name].status) end						
-											
+		if data.personal == nil then
+			accept = true
+		elseif data.personal == name then
+			accept = true
+			if rf.debug then print("Recieved fail-safe message from ", from,", BAD!") end
+		else
+			accept = false
 		end
 		
+		
+		if accept == true then
+		
+			if data.type == "player" then
+			
+				rf.gridData.puggerdata[data.name] = {
+												name = data.name,
+												hit = data.hit,
+												class = data.class,
+												roles = {tank = data.roles.tank, dps = data.roles.dps, heal = data.roles.heal, support = data.roles.support},
+												achiev = {tdq = data.achiev.tdq, ft = data.achiev.ft, ee = data.achiev.ee, ga = data.achiev.ga, ig = data.achiev.ig, pb = data.achiev.pb},
+												lookingfor = data.lookingfor,
+												note = data.note,
+												time = now
+												}
+				
+			elseif data.type == "raid" then
 
-		rf.gridupdate(data.type)
+				rf.gridData.raiddata[data.name] = {
+												name = data.name,
+												raidtype = data.raidtype,
+												loot = data.loot,
+												roles = {tank = data.roles.tank, dps = data.roles.dps, heal = data.roles.heal, support = data.roles.support},
+												note = data.note,
+												time = now,
+												}
+												
+			elseif data.type == "raidApplying" then
+						if rf.gridData.raidappdata[data.name] == nil then
+							if rfsettings.flash then rf.flashing = true end
+						elseif rf.gridData.raidappdata[data.name].status ~= data.status then 
+							if rfsettings.flash then rf.flashing = true end
+						end
+						
+						if data.status == "Declined." then rf.flashing = false end
+						
+						rf.gridData.raidappdata[data.name] = {
+												name = data.name,
+												type = data.raidtype,
+												loot = data.loot,
+												roles = {tank = data.roles.tank, dps = data.roles.dps, heal = data.roles.heal, support = data.roles.support},
+												note = data.note,
+												time = now,
+												status = data.status,
+												}
+						if rf.debug then print(data.name, "status =", rf.gridData.raidappdata[data.name].status) end
+												
+			elseif data.type == "playerApplying" then
+						if rf.gridData.playerappdata[data.name] == nil and rfsettings.flash then 
+							rf.flashing = true 
+						elseif rf.gridData.playerappdata[data.name].status ~= data.status and rfsettings.flash then 
+							rf.flashing = true
+						end
+						
+						if data.status == "Declined." then rf.flashing = false end
+						
+						rf.gridData.playerappdata[data.name] = {
+												name = data.name,
+												hit = data.hit,
+												class = data.class,
+												roles = {tank = data.roles.tank, dps = data.roles.dps, heal = data.roles.heal, support = data.roles.support},
+												achiev = {tdq = data.achiev.tdq, ft = data.achiev.ft, ee = data.achiev.ee, ga = data.achiev.ga, ig = data.achiev.ig, pb = data.achiev.pb},
+												lookingfor = data.lookingfor,
+												note = data.note,
+												time = now,
+												status = data.status,
+												}
+						if rf.debug then print(data.name, "status =", rf.gridData.playerappdata[data.name].status) end						
+												
+			end
+		
+			rf.gridupdate(data.type)
+		
+		end
 	end
 
 end
@@ -1125,7 +1201,7 @@ function rf.UI:setupPlayerTab()
 	frame.applybutton = EnKai.ui.nkButton("playerapply", frame)
 	frame.applybutton:SetText("Apply to Invite")
 	frame.applybutton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, -5)
-	frame.applybutton:SetColor(.42, .84, .42, 1)
+	frame.applybutton:SetColor(.20, .65, .20, 1)
 	frame.applybutton:SetFontColor( 0, 0, 0, 1 )
 	frame.applybutton:SetLayer(5)
 
@@ -1144,6 +1220,21 @@ function rf.UI:setupPlayerTab()
 		rf.apply("player",playerkey)		
 		
 	end, "playerapply.Left.Click")
+	
+	frame.applybutton:EventAttach(Event.UI.Input.Mouse.Left.Down, function (self)		
+		frame.applybutton:SetScale(.95)
+	end, "applybutton.button.Left.Down")
+	
+	frame.applybutton:EventAttach(Event.UI.Input.Mouse.Left.Up, function (self)		
+		frame.applybutton:SetScale(1)
+		frame.applybutton:SetText("Apply to Invite")
+	end, "applybutton.button.Left.Up")
+	
+	frame.applybutton:EventAttach(Event.UI.Input.Mouse.Left.Upoutside, function (self)		
+		frame.applybutton:SetScale(1)
+		frame.applybutton:SetText("Apply to Invite")
+	end, "applybutton.button.Left.Upoutside")		
+	
 	
 	
 	--Slider
@@ -1421,7 +1512,7 @@ function rf.UI:setupRaidTab()
 	frame.applybutton = EnKai.ui.nkButton("RFraidapply", frame)
 	frame.applybutton:SetText("Apply To Join")
 	frame.applybutton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, -5)
-	frame.applybutton:SetColor(.42, .84, .42, 1)
+	frame.applybutton:SetColor(.20, .65, .20, 1)
 	frame.applybutton:SetFontColor( 0, 0, 0, 1 )
 	frame.applybutton:SetLayer(5)
 
@@ -1442,6 +1533,21 @@ function rf.UI:setupRaidTab()
 		rf.apply("raid",raidkey)		
 		
 	end, "RFraidapply.Left.Click")
+	
+	frame.applybutton:EventAttach(Event.UI.Input.Mouse.Left.Down, function (self)		
+		frame.applybutton:SetScale(.95)
+	end, "applybutton.button.Left.Down")
+	
+	frame.applybutton:EventAttach(Event.UI.Input.Mouse.Left.Up, function (self)		
+		frame.applybutton:SetScale(1)
+		frame.applybutton:SetText("Apply To Join")
+	end, "applybutton.button.Left.Up")
+	
+	frame.applybutton:EventAttach(Event.UI.Input.Mouse.Left.Upoutside, function (self)		
+		frame.applybutton:SetScale(1)
+		frame.applybutton:SetText("Apply To Join")
+	end, "applybutton.button.Left.Upoutside")	
+	
 	
 	--close
 											
@@ -2001,34 +2107,36 @@ function rf.UI:setupPostTab()
 	
 	--PlayerPost button
 	
-	frame.btPlayerPost = UI.CreateFrame ('Texture', 'RFbtPlayerPost', frame)
+	
+	frame.btPlayerPost = EnKai.ui.nkButton('RFbtPlayerPost', frame)
 
-	frame.btPlayerPost:SetTexture('RaidFinder', 'gfx/tabPaneVertInActive.png')
-	frame.btPlayerPost:SetWidth(100)
-	frame.btPlayerPost:SetHeight(25)
+	frame.btPlayerPost:SetScale(.8)
+	frame.btPlayerPost:SetText("LFG - Post")
 	frame.btPlayerPost:SetPoint ("BOTTOMRIGHT", frame.PostPlayerBG:getElement(), "BOTTOMRIGHT", -10, -20)
+	frame.btPlayerPost:SetLayer(5)
+	frame.btPlayerPost:SetColor(.20, .65, .20, 1)
+	frame.btPlayerPost:SetFontColor(0,0,0,1)
 	
-	frame.btPlayerPost:EventAttach(Event.UI.Input.Mouse.Left.Click, function (self)
+	frame.btPlayerPost:EventAttach(Event.UI.Input.Mouse.Left.Click, function ()
+		frame.exptext:SetText("[" .. (rfsettings.playerdata.achiev.tdq + rfsettings.playerdata.achiev.ft + rfsettings.playerdata.achiev.ee) .. "/13]" .. "[" .. (rfsettings.playerdata.achiev.ga + rfsettings.playerdata.achiev.ig + rfsettings.playerdata.achiev.pb) .. "/12]")
+		frame.hittext:SetText(tostring(Inspect.Stat("hitUnbuffed")))
+		rf.playerdata()
+		rf.playerpost()	
+	end, "RFbtPlayerPost.Left.Click")	
 	
-	frame.exptext:SetText("[" .. (rfsettings.playerdata.achiev.tdq + rfsettings.playerdata.achiev.ft + rfsettings.playerdata.achiev.ee) .. "/13]" .. "[" .. (rfsettings.playerdata.achiev.ga + rfsettings.playerdata.achiev.ig + rfsettings.playerdata.achiev.pb) .. "/12]")
-	frame.hittext:SetText(tostring(Inspect.Stat("hitUnbuffed")))
-	rf.playerdata()
-	rf.playerpost()	
+	frame.btPlayerPost:EventAttach(Event.UI.Input.Mouse.Left.Down, function (self)		
+		frame.btPlayerPost:SetScale(.75)
+	end, "RFbtPlayerPost.button.Left.Down")
 	
+	frame.btPlayerPost:EventAttach(Event.UI.Input.Mouse.Left.Up, function (self)		
+		frame.btPlayerPost:SetScale(.8)
+		frame.btPlayerPost:SetText("LFG - Post")
+	end, "RFbtPlayerPost.button.Left.Up")
 	
-	end, "RFPlayerPost.Left.Click")	
-	
-	frame.playerPostLabel = UI.CreateFrame ('Text', 'playerPostLabel', frame.btPlayerPost)
-	
-	frame.playerPostLabel:SetPoint("CENTER", frame.btPlayerPost, "CENTER")
-	frame.playerPostLabel:SetFontSize(16)
-	frame.playerPostLabel:SetFontColor(1,1,1,1)
-	frame.playerPostLabel:SetHeight(25)
-	frame.playerPostLabel:SetLayer(3)
-	frame.playerPostLabel:SetText("LFG - Post")
-	frame.playerPostLabel:SetVisible(true)
-	
-	frame.btPlayerPost:SetLayer(1)
+	frame.btPlayerPost:EventAttach(Event.UI.Input.Mouse.Left.Upoutside, function (self)		
+		frame.btPlayerPost:SetScale(.8)
+		frame.btPlayerPost:SetText("LFG - Post")
+	end, "RFbtPlayerPost.button.Left.Upoutside")
 	
 	
 	
@@ -2165,27 +2273,33 @@ function rf.UI:setupPostTab()
 	
 	--RaidPost button
 	
-	frame.btRaidPost = UI.CreateFrame ('Texture', 'RFbtRaidPost', frame)
+	frame.btRaidPost = EnKai.ui.nkButton('RFbtRaidPost', frame)
 
-	frame.btRaidPost:SetTexture('RaidFinder', 'gfx/tabPaneVertInActive.png')
-	frame.btRaidPost:SetWidth(100)
-	frame.btRaidPost:SetHeight(25)
+	frame.btRaidPost:SetScale(.8)
+	frame.btRaidPost:SetText("LFM - Post")
 	frame.btRaidPost:SetPoint ("BOTTOMRIGHT", frame.PostRaidBG:getElement(), "BOTTOMRIGHT", -10, -20)
+	frame.btRaidPost:SetLayer(5)
+	frame.btRaidPost:SetColor(.20, .65, .20, 1)
+	frame.btRaidPost:SetFontColor(0,0,0,1)
 	
+	frame.btRaidPost:EventAttach(Event.UI.Input.Mouse.Left.Click, function ()
+		rf.playerdata() 
+		rf.raidpost()
+	end, "RFbtRaidPost.Left.Click")	
 	
-	frame.btRaidPost:EventAttach(Event.UI.Input.Mouse.Left.Click, function (self)	rf.playerdata() rf.raidpost()	end, "RFRaidPost.Left.Click")										
-
-	frame.raidPostLabel = UI.CreateFrame ('Text', 'playerPostLabel', frame.btRaidPost)
+	frame.btRaidPost:EventAttach(Event.UI.Input.Mouse.Left.Down, function (self)		
+		frame.btRaidPost:SetScale(.75)
+	end, "RFbtRaidPost.button.Left.Down")
 	
-	frame.raidPostLabel:SetPoint("CENTER", frame.btRaidPost, "CENTER")
-	frame.raidPostLabel:SetFontSize(16)
-	frame.raidPostLabel:SetFontColor(1,1,1,1)
-	frame.raidPostLabel:SetHeight(25)
-	frame.raidPostLabel:SetLayer(3)
-	frame.raidPostLabel:SetText("LFM - Post")
-	frame.raidPostLabel:SetVisible(true)	
+	frame.btRaidPost:EventAttach(Event.UI.Input.Mouse.Left.Up, function (self)		
+		frame.btRaidPost:SetScale(.8)
+		frame.btRaidPost:SetText("LFM - Post")
+	end, "RFbtRaidPost.button.Left.Up")
 	
-	frame.btRaidPost:SetLayer(1)
+	frame.btRaidPost:EventAttach(Event.UI.Input.Mouse.Left.Upoutside, function (self)		
+		frame.btRaidPost:SetScale(.8)
+		frame.btRaidPost:SetText("LFM - Post")
+	end, "RFbtRaidPost.button.Left.Upoutside")	
 
 											
 --stop
@@ -2202,6 +2316,20 @@ function rf.UI:setupPostTab()
 		
 		print("Stopped All Posts")
 	end, "PostTabStop.Left.Click")	
+	
+	frame.stopButton:EventAttach(Event.UI.Input.Mouse.Left.Down, function (self)		
+		frame.stopButton:SetScale(.95)
+	end, "stopButton.button.Left.Down")
+	
+	frame.stopButton:EventAttach(Event.UI.Input.Mouse.Left.Up, function (self)		
+		frame.stopButton:SetScale(1)
+		frame.stopButton:SetText("Stop Posting")
+	end, "stopButton.button.Left.Up")
+	
+	frame.stopButton:EventAttach(Event.UI.Input.Mouse.Left.Upoutside, function (self)		
+		frame.stopButton:SetScale(1)
+		frame.stopButton:SetText("Stop Posting")
+	end, "stopButton.button.Left.Upoutside")	
 	
 	
 	
@@ -2405,6 +2533,20 @@ function rf.UI:setupStatusTab()
 		rf.deny(seltype,name)
 
 	end, 'RFstatusdeny.Clicked')
+	
+	frame.denyButton:EventAttach(Event.UI.Input.Mouse.Left.Down, function (self)		
+		frame.denyButton:SetScale(.95)
+	end, "denyButton.button.Left.Down")
+	
+	frame.denyButton:EventAttach(Event.UI.Input.Mouse.Left.Up, function (self)		
+		frame.denyButton:SetScale(1)
+		frame.denyButton:SetText("Deny/Clear")
+	end, "denyButton.button.Left.Up")
+	
+	frame.denyButton:EventAttach(Event.UI.Input.Mouse.Left.Upoutside, function (self)		
+		frame.denyButton:SetScale(1)
+		frame.denyButton:SetText("Deny/Clear")
+	end, "denyButton.button.Left.Upoutside")		
 
 
 --approve
@@ -2412,7 +2554,7 @@ function rf.UI:setupStatusTab()
 	frame.approveButton = EnKai.ui.nkButton("RFstatusapprove", rf.uiElements.context)
 	frame.approveButton:SetText("Approve/Invite")
 	frame.approveButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -20, -5)
-	frame.approveButton:SetColor(.42, .84, .42, 1)
+	frame.approveButton:SetColor(.20, .65, .20, 1)
 	frame.approveButton:SetFontColor( 0, 0, 0, 1 )
 	frame.approveButton:SetSecureMode("restricted")
 	frame.approveButton:SetLayer(5)
@@ -2442,6 +2584,23 @@ function rf.UI:setupStatusTab()
 		
 
 	end, 'RFstatusapprove.Clicked')	
+	
+	frame.approveButton:EventAttach(Event.UI.Input.Mouse.Left.Down, function (self)		
+		frame.approveButton:SetScale(.95)
+	end, "approveButton.button.Left.Down")
+	
+	frame.approveButton:EventAttach(Event.UI.Input.Mouse.Left.Up, function (self)		
+		frame.approveButton:SetScale(1)
+		frame.approveButton:SetText("Approve/Invite")
+	end, "approveButton.button.Left.Up")
+	
+	frame.approveButton:EventAttach(Event.UI.Input.Mouse.Left.Upoutside, function (self)		
+		frame.approveButton:SetScale(1)
+		frame.approveButton:SetText("Approve/Invite")
+	end, "approveButton.button.Left.Upoutside")		
+	
+	
+	
 	
 	frame.dialog = EnKai.ui.nkDialog("inviteconfirm", rf.uiElements.context)
 	frame.dialog:SetType("confirm")
@@ -3149,7 +3308,7 @@ end
 
 function rf.testtable()
 
-Command.Message.Send("Avness", "raidfinder", "data", function(failure, message) if rf.debug then print("send", failure, message) end end)
+
 
 --[[	rfsettings.playerdata.type = "player"
 	local data = rfsettings.playerdata
