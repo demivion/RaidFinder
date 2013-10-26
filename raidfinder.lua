@@ -20,7 +20,7 @@ rf.raidframe = {}
 rf.statusframe = {}
 rf.secure = false
 rf.flashing = false
-rf.activetab = 0
+rf.activetab = 1
 rf.dialog = false
 rf.debug = false
 rf.EU = nil
@@ -170,6 +170,7 @@ function rf.settings()
 			roles = {tank = false, dps = false, heal = false, support = false},
 			note = "",
 			type = "",
+			channel = "",
 			},
 	}
 	
@@ -253,6 +254,7 @@ function rf.channelcheck()
 			if (shard == 'Bloodiron' or shard == 'Brutwacht' or shard == 'Trübkopf' or shard == 'Brutmutter' or shard == 'Brisesol' or shard == 'Phynnious' or shard == 'Gelidra' or shard == 'Zaviel') then rf.EU = true end
 			
 			for k2,v2 in pairs(detail) do
+			
 
 				if ((shard == 'Faeblight' or shard == 'Brutwacht') and k2 == 'CrossEvents' and v2 == true) then
 					crossevents = true
@@ -624,6 +626,7 @@ function rf.raiddata()
 			roles = {tank = rfsettings.raiddata.roles.tank, dps = rfsettings.raiddata.roles.dps, heal = rfsettings.raiddata.roles.heal, support = rfsettings.raiddata.roles.support},
 			note = rfsettings.raiddata.note,
 			type = "",
+			channel = rfsettings.raiddata.channel,
 			}	
 			
 	rfsettings.raiddata = data
@@ -1053,7 +1056,14 @@ function rf.open()
 	end
 	rf.visible = true
 	rf.uiElements.window:SetVisible(true)
-	if rf.secure ~= true and rf.UI.frame.paneStatusTab.approveButton ~= nil then rf.UI.frame.paneStatusTab.approveButton:SetVisible(true) end
+	
+	if rf.secure ~= true and rf.UI.frame.paneStatusTab.approveButton ~= nil and rf.activetab == 4 then
+		rf.UI.frame.paneStatusTab.approveButton:SetVisible(true)
+	end
+	
+	if rf.secure ~= true and rf.UI.frame.panePostTab.btRaidPost ~= nil and rf.activetab == 1 then
+		rf.UI.frame.panePostTab.btRaidPost:SetVisible(true)
+	end	
 	
 	if rf.activetab == 4 then rf.flashing = false end
 	
@@ -1062,7 +1072,12 @@ end
 function rf.UI:closeUI()
 	rf.visible = false
 	rf.uiElements.window:SetVisible(false)
-	if rf.secure ~= true and rf.UI.frame.paneStatusTab.approveButton ~= nil then rf.UI.frame.paneStatusTab.approveButton:SetVisible(false) end
+	if rf.secure ~= true and rf.UI.frame.paneStatusTab.approveButton ~= nil then 
+	rf.UI.frame.paneStatusTab.approveButton:SetVisible(false)
+	end
+	if rf.secure ~= true and rf.UI.frame.panePostTab.btRaidPost ~= nil then
+	rf.UI.frame.panePostTab.btRaidPost:SetVisible(false)
+	end
 end
 
 function rf.UI:createUI()
@@ -1122,12 +1137,16 @@ function rf.UI:createUI()
 		rf.activetab = newValue
 		
 		if rf.secure == true then return end
-		if rf.statusframe.grid == nil then return end
-		if newValue == 4 then
-		rf.UI.frame.paneStatusTab.approveButton:SetVisible(true)
 		
+		if newValue == 4 then
+			if rf.statusframe.grid ~= nil then rf.UI.frame.paneStatusTab.approveButton:SetVisible(true) end
+			rf.UI.frame.panePostTab.btRaidPost:SetVisible(false)
+		elseif newValue == 1 then
+			rf.UI.frame.panePostTab.btRaidPost:SetVisible(true)
+			if rf.statusframe.grid ~= nil then rf.UI.frame.paneStatusTab.approveButton:SetVisible(false) end
 		else
-		rf.UI.frame.paneStatusTab.approveButton:SetVisible(false)
+			rf.UI.frame.panePostTab.btRaidPost:SetVisible(false)
+			if rf.statusframe.grid ~= nil then rf.UI.frame.paneStatusTab.approveButton:SetVisible(false) end
 		end
 		
 	end, 'RFFrameTabPane.TabPaneChanged')
@@ -1787,6 +1806,10 @@ function rf.UI:setupPostTab()
 	rf.raiddata()
 	
 	local frame = rf.UI.frame.panePostTab
+	local tank =  ""
+	local dps = ""
+	local support = ""
+	local heal =  ""
 
 	frame.PostPlayerBG = UI.CreateFrame ('nkExtTexture', 'RFPostPlayerBack', frame, {type = 'RaidFinder', path = 'gfx/TabPaneBG.png', width = 910, height = 200, anchors = {{ from = 'TOPLEFT', object = frame, to = "TOPLEFT", x = 7, y = 36}}})
 	
@@ -2271,9 +2294,34 @@ function rf.UI:setupPostTab()
 	frame.raidnoteinfo:SetText("Press 'Enter' to save note.")
 	frame.raidnoteinfo:SetWidth(200)
 	
+	frame.channelhead = UI.CreateFrame("Text", "RFchannelhead", frame.PostRaidBG:getElement())
+	
+	frame.channelhead:SetPoint("TOPLEFT", frame.raidnoteinfo, "BOTTOMLEFT", 0, 15)
+	frame.channelhead:SetText("Broadcast your raid in chat channel #:")
+	frame.channelhead:SetFontSize(14)
+	frame.channelhead:SetFontColor(1, 1, 1, 1)
+	frame.channelhead:SetWordwrap(true)
+	frame.channelhead:SetWidth(130)
+	
+	frame.channeltext = EnKai.uiCreateFrame("nkTextfield", 'RFchanneltext', frame.PostRaidBG:getElement())	
+	frame.channeltext:SetPoint("TOPLEFT", frame.channelhead, "BOTTOMRIGHT", -10, -20)
+	frame.channeltext:SetWidth(30)
+	frame.channeltext:SetHeight(22)
+	frame.channeltext:SetColor(0.925, 0.894, 0.741, 1)
+	frame.channeltext:SetText(rfsettings.raiddata.channel)
+	frame.channeltext:SetLayer(2)
+	
+	Command.Event.Attach(EnKai.events['RFchanneltext'].TextfieldChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'RFchanneltext.TextfieldChanged')
+	
+	frame.channelinfo = EnKai.ui.nkInfoText("RFchannelinfo", frame.channeltext)
+	frame.channelinfo:SetPoint("TOPLEFT", frame.channelhead, "BOTTOMLEFT", 0, 5)
+	frame.channelinfo:SetType("info")
+	frame.channelinfo:SetText("Press 'Enter' to save channel #")
+	frame.channelinfo:SetWidth(200)
+	
 	--RaidPost button
 	
-	frame.btRaidPost = EnKai.ui.nkButton('RFbtRaidPost', frame)
+	frame.btRaidPost = EnKai.ui.nkButton('RFbtRaidPost', rf.uiElements.context)
 
 	frame.btRaidPost:SetScale(.8)
 	frame.btRaidPost:SetText("LFM - Post")
@@ -2281,10 +2329,44 @@ function rf.UI:setupPostTab()
 	frame.btRaidPost:SetLayer(5)
 	frame.btRaidPost:SetColor(.20, .65, .20, 1)
 	frame.btRaidPost:SetFontColor(0,0,0,1)
-	
+		
 	frame.btRaidPost:EventAttach(Event.UI.Input.Mouse.Left.Click, function ()
 		rf.playerdata() 
 		rf.raidpost()
+		
+		local raid = frame.typeselection:GetSelectedLabel()
+		local loot = frame.lootselection:GetSelectedLabel()
+
+		if rfsettings.raiddata.roles.tank == true then
+			tank = "|Tank|"
+		end
+
+		if rfsettings.raiddata.roles.heal == true then
+			heal = "|Heal|"
+		end
+		
+		
+		if rfsettings.raiddata.roles.dps == true then
+			dps = "|DPS|"
+		end
+		
+		
+		
+		if rfsettings.raiddata.roles.support == true then
+			support = "|Support|"
+		end
+		
+		local channel = frame.channeltext:GetText()
+			
+		local macro = (channel .. " [RaidFinder] LFM -" .. raid .. "- Need: " .. tank .. heal .. dps .. support .. "  Loot: " .. loot) 
+		
+		if (channel ~= nil and channel ~= "") then
+			frame.btRaidPost:SetSecureMode("restricted")
+			frame.btRaidPost:EventMacroSet(Event.UI.Input.Mouse.Left.Click, macro)
+		else
+			frame.btRaidPost:EventMacroSet(Event.UI.Input.Mouse.Left.Click, "")
+		end
+		
 	end, "RFbtRaidPost.Left.Click")	
 	
 	frame.btRaidPost:EventAttach(Event.UI.Input.Mouse.Left.Down, function (self)		
@@ -2557,7 +2639,7 @@ function rf.UI:setupStatusTab()
 	frame.approveButton:SetColor(.20, .65, .20, 1)
 	frame.approveButton:SetFontColor( 0, 0, 0, 1 )
 	frame.approveButton:SetSecureMode("restricted")
-	frame.approveButton:SetLayer(5)
+	frame.approveButton:SetLayer(2)
 	
 	
 	
@@ -2786,6 +2868,7 @@ function rf.lookingforupdate(frame)
 	rfsettings.raiddata.roles.support = frame.raidsupport:GetChecked()
 	
 	rfsettings.raiddata.note = frame.raidnotetext:GetText()
+	rfsettings.raiddata.channel = frame.channeltext:GetText()
 	
 end
 
