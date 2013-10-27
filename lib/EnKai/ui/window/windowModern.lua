@@ -37,10 +37,11 @@ function EnKai.ui.nkWindowModern(name, parent)
 		
 		local left, top, right, bottom = window:GetBounds()
 		
-		window:ClearAll()
+		--window:ClearAll()
+		window:ClearPoint("TOPLEFT")
 		window:SetPoint("TOPLEFT", UIParent, "TOPLEFT", left, top)
-		window:SetWidth(right-left)
-		window:SetHeight(bottom-top)
+		--window:SetWidth(right-left)
+		--window:SetHeight(bottom-top)
 	
 	end, name .. ".header.Left.Down")
 	
@@ -227,10 +228,25 @@ function EnKai.ui.nkWindowModern(name, parent)
 	end
 	
 	function window:SetPoint(from, object, to, x, y)
-		oSetPoint(self, from, object, to, x, y)
+	
+		if x ~= nil then
+			if x < 0 then x = 0 end
+			if x + window:GetWidth() > UIParent:GetWidth() then x = UIParent:GetWidth() - window:GetWidth() end
+		end
+		
+		if y ~= nil then
+			if y < 0 then y = 0 end
+		end
+
+		if x ~= nil and y ~= nil then			
+			oSetPoint(self, from, object, to, x, y)
+		else
+			oSetPoint(self, from, object, to)
+		end
+		
 		if internalSetPoint == true then return end
 		if window:GetTop() + window:GetHeight() >= UIParent:GetHeight() then window:ProcessMove() end
-	end
+	end 
 	
 	EnKai.eventHandlers[name] = {}
 	EnKai.events[name] = {}

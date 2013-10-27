@@ -226,7 +226,7 @@ function rf.main(_, addon)
 	
 	rf.UI:addonButton()
 	
-	--EnKai.version.init(addonInfo.toc.Identifier, addonInfo.toc.Version)
+	EnKai.version.init(addonInfo.toc.Identifier, addonInfo.toc.Version)
 	
 	end	
 	
@@ -256,7 +256,7 @@ function rf.channelcheck()
 			for k2,v2 in pairs(detail) do
 			
 
-				if ((shard == 'Faeblight' or shard == 'Brutwacht') and k2 == 'CrossEvents' and v2 == true) then
+				if ((shard == 'Faeblight' or shard == 'Brutwacht') and k2 == 'crossevents' and v2 == true) then
 					crossevents = true
 
 					break
@@ -264,7 +264,7 @@ function rf.channelcheck()
 					crossevents = true
 
 					break
-				elseif (rf.EU == true and k2 == 'CrossEvents@Brutwacht' and v2 == true) then
+				elseif (rf.EU == true and k2 == 'crossevents@Brutwacht' and v2 == true) then
 					crossevents = true
 
 					break
@@ -1696,13 +1696,13 @@ function rf.UI:setupInstructionsTab()
 
 	--frame.AboutBG = UI.CreateFrame ('nkExtTexture', 'RFPostPlayerBack', frame, {type = 'RaidFinder', path = 'gfx/TabPaneBG.png', width = 910, height = 400, anchors = {{ from = 'TOPLEFT', object = frame, to = "TOPLEFT", x = 7, y = 36}}})
 
-	local instmanual = EnKai.doc("Instructions", frame)
+	local instmanual = EnKai.docEmbedded("Instructions", frame)
 	
 	instmanual:SetPoint("TOPLEFT", frame, "TOPLEFT",7,35)
-	instmanual:SetTitle("Instructions")
-	instmanual:SetWidth(909)
-	instmanual:SetHeight(396)
-	instmanual:SetDragable(false)
+	--instmanual:SetTitle("Instructions")
+	instmanual:SetWidth(925)
+	instmanual:SetHeight(410)
+	--instmanual:SetDragable(false)
 		
 	local manual = { { 	parent = nil,
 						title = ") Adjusting the UI",

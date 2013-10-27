@@ -71,12 +71,32 @@ function EnKai.ui.nkWindow(name, parent)
 		if flag == true then allowSecureClose = false else allowSecureClose = true end
 	end
 		
-	local oSetWidth, oSetHeight = window.SetWidth, window.SetHeight
+	local oSetWidth, oSetHeight, oSetPoint = window.SetWidth, window.SetHeight, window.SetPoint
 	
 	function window:SetWidth(width)
 		oSetWidth(self, width)
 		dragFrame:SetWidth(width)
 	end
+	
+	function window:SetPoint(from, object, to, x, y)
+	
+		if x ~= nil then
+			if x < 0 then x = 0 end
+			if x + window:GetWidth() > UIParent:GetWidth() then x = UIParent:GetWidth() - window:GetWidth() end
+		end
+		
+		if y ~= nil then
+			if y < 0 then y = 0 end
+			if y + window:GetHeight() > UIParent:GetHeight() then y = UIParent:GetHeight() - window:GetHeight() end
+		end
+		
+		if x ~= nil and y ~= nil then			
+			oSetPoint(self, from, object, to, x, y)
+		else
+			oSetPoint(self, from, object, to)
+		end
+		
+	end 
 	
 	
 	return window

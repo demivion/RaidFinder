@@ -22,7 +22,7 @@ RunOnStartup = {
 -- X-Curse-Project-Name: LibAsyncTextures
 -- X-Curse-Project-ID: lib-async-textures
 -- X-Curse-Repository-ID: rift/lib-async-textures/mainline
--- X-Curse-Packaged-Version: V1.3.5
+-- X-Curse-Packaged-Version: V1.3.6
 -- X-Curse-Project-Name: EnKai
 -- X-Curse-Project-ID: enkai
 -- X-Curse-Repository-ID: rift/enkai/mainline

@@ -67,6 +67,27 @@ function EnKai.ui.nkActionButton(name, parent)
 		if flag == true then tint:SetVisible(false) else tint:SetVisible(true) end
 	end
 	
+	local oSetPoint = button.SetPoint
+	
+	function button:SetPoint(from, object, to, x, y)
+	
+		if x ~= nil then			
+			if x < 0 then x = 0 end
+			if x + button:GetWidth() > UIParent:GetWidth() then x = UIParent:GetWidth() - button:GetWidth() end
+		end
+		
+		if y ~= nil then
+			if y < 0 then y = 0 end
+			if y + button:GetHeight() > UIParent:GetHeight() then y = UIParent:GetHeight() - button:GetHeight() end
+		end
+		
+		if x ~= nil and y ~= nil then			
+			oSetPoint(self, from, object, to, x, y)
+		else
+			oSetPoint(self, from, object, to)
+		end
+	end	
+	
 	button:EventAttach(Event.UI.Input.Mouse.Right.Down, function (self)		
 		
 		if dragable == false then return end

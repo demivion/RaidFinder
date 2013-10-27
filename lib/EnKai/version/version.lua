@@ -15,6 +15,8 @@ local function checkVersion (myVersion, reportedVersion)
 	if #myVersionArray ~= #reportedVersionArray then return false end
 	
 	for idx = 1, #myVersionArray, 1 do
+		if tonumber(myVersionArray[idx]) == nil or tonumber(reportedVersionArray[idx]) == nil then return true end -- always report true if version number is not completely number
+	
 		if tonumber(myVersionArray[idx]) < tonumber(reportedVersionArray[idx]) then
 			return false
 		elseif tonumber(myVersionArray[idx]) > tonumber(reportedVersionArray[idx]) then			

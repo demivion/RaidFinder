@@ -36,3 +36,7 @@ RunOnStartup = {
 -- X-Curse-Project-Name: RaidFinder
 -- X-Curse-Project-ID: raidfinder
 -- X-Curse-Repository-ID: rift/raidfinder/mainline
+-- X-Curse-Packaged-Version: v1.0
+-- X-Curse-Project-Name: RaidFinder
+-- X-Curse-Project-ID: raidfinder
+-- X-Curse-Repository-ID: rift/raidfinder/mainline

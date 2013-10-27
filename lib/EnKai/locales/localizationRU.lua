@@ -4,6 +4,7 @@ if ( Inspect.System.Language() == "Russian"  ) then
 
 	privateVars.langTexts = 	{	addonUpdate	= '<font color="#FF6A00">New version <font color="#FFFFFF">%s</font> of addon <font color="#FFFFFF">%s</font> available. Please update the addon.</font>',	
 							requiredFaction = 'Requires %s:\n%s',
+							factionList = {"Friendly", "Decorated", "Honored", "Revered", "Glorified", "Venerated"},
 							yes  = 'Да',
 							no = 'Нет',
 							ok = 'Оk',
