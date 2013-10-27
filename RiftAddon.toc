@@ -4,7 +4,7 @@ NameShort = "RF"
 Description = "A Raid Finder"
 Author = "Vexxx@Greybriar"
 Website = "http://www.curse.com/addons/rift/raidfinder"
-Version = "1.01"
+Version = "1.02"
 Email = "izlar@ufl.edu"
 Environment = "2.4"
 
@@ -13,13 +13,13 @@ RunOnStartup = {
 }
 
 Embed = {
-	["lib/nkGenie"] = true,
 	["lib/EnKai"] = true,
+	["lib/SafesRaidManager"] = true
 }
 
 Dependencies = {
-	nkGenie = {"required", "before"},
 	EnKai = {"required", "before"},
+	SafesRaidManager = {"required", "before"},
 }
 
 SavedVariables = {

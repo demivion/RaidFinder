@@ -16,7 +16,7 @@ RunOnStartup = {
 
 -- Set this value to true to enable chat spamming debug messages and other debugging facilities
 --@debug@
--- -- debug = true
+-- -- -- debug = true
 --@end-debug@
 -- X-Curse-Packaged-Version: r20130311213214
 -- X-Curse-Project-Name: LibAsyncTextures
@@ -26,3 +26,7 @@ RunOnStartup = {
 -- X-Curse-Project-Name: EnKai
 -- X-Curse-Project-ID: enkai
 -- X-Curse-Repository-ID: rift/enkai/mainline
+-- X-Curse-Packaged-Version: v1.01
+-- X-Curse-Project-Name: RaidFinder
+-- X-Curse-Project-ID: raidfinder
+-- X-Curse-Repository-ID: rift/raidfinder/mainline

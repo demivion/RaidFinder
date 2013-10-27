@@ -14,6 +14,7 @@ rf.lastupdate = {}
 rf.updateindex = 0
 rf.broadcastdata = ""
 rf.broadcasting = false
+rf.broadcasttype = ""
 rf.visible = false
 rf.playerframe = {}
 rf.raidframe = {}
@@ -41,7 +42,8 @@ RaidFinder.gridData = {
 			{header = "Type:", width = 75},
 			{header = "Loot Type:", width = 85},
 			{header = "Need:", width = 60},
-			{header = "Note:", width = 475},
+			{header = "Note:", width = 425},
+			{header = "Size:", width = 50},
 		},
 	},
 	selectionheaders = {	
@@ -171,6 +173,7 @@ function rf.settings()
 			note = "",
 			type = "",
 			channel = "",
+			size = "",
 			},
 	}
 	
@@ -210,12 +213,7 @@ function rf.main(_, addon)
 
 	if (addon == addonInfo.toc.Identifier) then		
 		print ("Raid Finder Loaded v" .. addonInfo.toc.Version)
-	--[[		
-		EnKai.manager.init('RaidFinder', nil, function() 
-			if rf.uiElements.window == nil then rf.uiElements.window = rf.UI:createUI() end
-			rf.uiElements.window:SetVisible(true)
-		end)	
-	--]]	
+	
 		
 	table.insert(Event.System.Update.Begin, 		{rf.onupdate, 		"RaidFinder", "OnUpdate" })
 	rf.updateindex = #Event.System.Update.Begin
@@ -256,15 +254,15 @@ function rf.channelcheck()
 			for k2,v2 in pairs(detail) do
 			
 
-				if ((shard == 'Faeblight' or shard == 'Brutwacht') and k2 == 'crossevents' and v2 == true) then
+				if ((shard == 'Faeblight' or shard == 'Brutwacht') and (k2 == 'crossevents' or k2 == 'CrossEvents') and v2 == true) then
 					crossevents = true
 
 					break
-				elseif (rf.EU == false and k2 == 'CrossEvents@Faeblight' and v2 == true) then
+				elseif (rf.EU == false and (k2 == 'CrossEvents@Faeblight' or k2 == 'crossevents@Faeblight') and v2 == true) then
 					crossevents = true
 
 					break
-				elseif (rf.EU == true and k2 == 'crossevents@Brutwacht' and v2 == true) then
+				elseif (rf.EU == true and (k2 == 'crossevents@Brutwacht' or k2 == 'CrossEvents@Brutwacht') and v2 == true) then
 					crossevents = true
 
 					break
@@ -316,6 +314,11 @@ function rf.onupdate()
 	then
 		if rf.broadcasting == true then
 			rf.lastbroadcast = now
+			if rf.broadcasttype == "raid" then
+				rf.raiddata()
+			elseif rf.broadcasttype == "player" then
+				rf.playerdata()
+			end
 			rf.broadcast(rf.broadcastdata)
 
 		end
@@ -613,12 +616,32 @@ function rf.playerdata()
 
 	rfsettings.playerdata = data
 	
+	if rf.broadcasttype == "player" then
+		rf.playerpost()
+	end
+	
 end	
 
 function rf.raiddata()
 	
 	local playername = Inspect.Unit.Detail("player").name
 	local shard = Inspect.Shard().name
+	local groupsize = 0
+	
+	if rfsettings.raiddata.raidtype == "wf" or rfsettings.raiddata.raidtype == "exp" then
+		groupsize = 5
+	elseif rfsettings.raiddata.raidtype == "tdq" or rfsettings.raiddata.raidtype == "ga" then
+		groupsize = 10
+	else
+		groupsize = 20
+	end
+	
+	local currentgroup = LibSRM.GroupCount()
+	
+	if currentgroup == 0 then 
+		currentgroup = 1
+	end
+	
 	local data = {
 			name = (playername .. "@" .. shard),
 			raidtype = rfsettings.raiddata.raidtype,
@@ -627,9 +650,14 @@ function rf.raiddata()
 			note = rfsettings.raiddata.note,
 			type = "",
 			channel = rfsettings.raiddata.channel,
+			size = ("[" .. currentgroup .. "/" .. groupsize .. "]")
 			}	
 			
 	rfsettings.raiddata = data
+	
+	if rf.broadcasttype == "raid" then
+		rf.raidpost()
+	end
 
 	
 end
@@ -646,7 +674,7 @@ function rf.playerpost()
 	local serialized = Utility.Serialize.Inline(data)
 	local compressed = zlib.deflate()(serialized, "finish")
 
-	print("Posted!")
+	
 	
 	rf.broadcastdata = compressed
 	rf.broadcasting = true
@@ -662,11 +690,8 @@ function rf.raidpost()
 	local data = rfsettings.raiddata
 
 	
-	
 	local serialized = Utility.Serialize.Inline(data)
 	local compressed = zlib.deflate()(serialized, "finish")
-	
-	print("Posted!")
 	
 	rf.broadcastdata = compressed
 	rf.broadcasting = true
@@ -992,6 +1017,7 @@ function rf.receive(from, type, channel, identifier, incoming)
 												roles = {tank = data.roles.tank, dps = data.roles.dps, heal = data.roles.heal, support = data.roles.support},
 												note = data.note,
 												time = now,
+												size = data.size,
 												}
 												
 			elseif data.type == "raidApplying" then
@@ -1094,7 +1120,6 @@ function rf.UI:createUI()
 
 	rf.UI.frame.closeButton = UI.CreateFrame('Texture', 'MainClose', rf.UI.frame)
 	rf.UI.frame.closeButton:SetTextureAsync('RaidFinder', 'lib/EnKai/gfx/btnClose.png')
-	--rf.UI.frame.closeButton:SetText("Close")
 	rf.UI.frame.closeButton:SetPoint("TOPRIGHT", rf.UI.frame, "TOPRIGHT", -12, 18)
 	rf.UI.frame.closeButton:SetLayer(2)
 	
@@ -1585,23 +1610,34 @@ function rf.UI:setupSettingsTab()
 
 	local frame = self.frame.paneSettingsTab
 
-	frame.AboutBG = UI.CreateFrame ('nkExtTexture', 'RFPostPlayerBack', frame, {type = 'RaidFinder', path = 'gfx/TabPaneBG.png', width = 655, height = 400, anchors = {{ from = 'TOPLEFT', object = frame, to = "TOPLEFT", x = 7, y = 36}}})
-	frame.SettingsBG = UI.CreateFrame ('nkExtTexture', 'RFPostRaidBack', frame, {type = 'RaidFinder', path = 'gfx/TabPaneBG.png', width = 255, height = 400, anchors = {{ from = 'TOPLEFT', object = frame.AboutBG:getElement(), to = "TOPRIGHT", x = 0, y = 0}}})
+	frame.AboutBG = UI.CreateFrame('Texture', 'RFAboutBG', frame)
+	frame.AboutBG:SetLayer(1)
+	frame.AboutBG:SetTexture('RaidFinder', 'gfx/TabPaneBG.png')
+	frame.AboutBG:SetWidth(655)
+	frame.AboutBG:SetHeight(400)
+	frame.AboutBG:SetPoint("TOPLEFT", frame, "TOPLEFT", 7, 36)	
+	
+	frame.SettingsBG = UI.CreateFrame('Texture', 'RFSettingsBG', frame)
+	frame.SettingsBG:SetLayer(1)
+	frame.SettingsBG:SetTexture('RaidFinder', 'gfx/TabPaneBG.png')
+	frame.SettingsBG:SetWidth(255)
+	frame.SettingsBG:SetHeight(400)
+	frame.SettingsBG:SetPoint("TOPLEFT", frame.AboutBG, "TOPRIGHT", 0, 0)	
 
 --About
 	
-	frame.addonName = UI.CreateFrame("Text", "RF.UI.About.addonName", frame.AboutBG:getElement())
-	frame.version = UI.CreateFrame("Text", "RF.UI.About.version", frame.AboutBG:getElement())
-	frame.writtenBy = UI.CreateFrame("Text", "RF.UI.About.writteBy", frame.AboutBG:getElement())
-	frame.copyright = UI.CreateFrame("Text", "RF.UI.About.copyright", frame.AboutBG:getElement())
-	frame.modules = UI.CreateFrame("Text", "RF.UI.About.modules", frame.AboutBG:getElement())
-	frame.instructions = UI.CreateFrame("Text", "RF.UI.About.instructions", frame.AboutBG:getElement())
-	frame.instructions2 = UI.CreateFrame("Text", "RF.UI.About.instructions2", frame.AboutBG:getElement())
-	frame.thanks = UI.CreateFrame("Text", "RF.UI.About.thanks", frame.AboutBG:getElement())
+	frame.addonName = UI.CreateFrame("Text", "RF.UI.About.addonName", frame.AboutBG)
+	frame.version = UI.CreateFrame("Text", "RF.UI.About.version", frame.AboutBG)
+	frame.writtenBy = UI.CreateFrame("Text", "RF.UI.About.writteBy", frame.AboutBG)
+	frame.copyright = UI.CreateFrame("Text", "RF.UI.About.copyright", frame.AboutBG)
+	frame.modules = UI.CreateFrame("Text", "RF.UI.About.modules", frame.AboutBG)
+	frame.instructions = UI.CreateFrame("Text", "RF.UI.About.instructions", frame.AboutBG)
+	frame.instructions2 = UI.CreateFrame("Text", "RF.UI.About.instructions2", frame.AboutBG)
+	frame.thanks = UI.CreateFrame("Text", "RF.UI.About.thanks", frame.AboutBG)
 
 	
 	
-	frame.addonName:SetPoint("TOPCENTER", frame.AboutBG:getElement(), "TOPCENTER", 0, 40)
+	frame.addonName:SetPoint("TOPCENTER", frame.AboutBG, "TOPCENTER", 0, 40)
 	frame.addonName:SetText(addonInfo.toc.Identifier)
 	frame.addonName:SetFontSize(30)
 	frame.addonName:SetFontColor(0.906, 0.784, 0.471, 1)
@@ -1640,10 +1676,10 @@ function rf.UI:setupSettingsTab()
 	
 	--Settings
 		--lock
-	frame.lockCheckbox = EnKai.uiCreateFrame("nkCheckbox", 'cblock', frame.SettingsBG:getElement())
+	frame.lockCheckbox = EnKai.uiCreateFrame("nkCheckbox", 'cblock', frame.SettingsBG)
 	frame.lockCheckbox:SetText("Lock Button")
 	frame.lockCheckbox:SetChecked(rfsettings.UIlock)
-	frame.lockCheckbox:SetPoint("TOPLEFT", frame.SettingsBG:getElement(), "TOPLEFT", 10, 50)
+	frame.lockCheckbox:SetPoint("TOPLEFT", frame.SettingsBG, "TOPLEFT", 10, 50)
 	frame.lockCheckbox:SetColor (0.925, 0.894, 0.741, 1 )
 	frame.lockCheckbox:SetLabelColor(0.925, 0.894, 0.741, 1 )
 	frame.lockCheckbox:SetLayer(2)
@@ -1658,7 +1694,7 @@ function rf.UI:setupSettingsTab()
 		end
 	end, 'cblock.CheckboxChanged')
 		--flash
-	frame.flashCheckbox = EnKai.uiCreateFrame("nkCheckbox", 'cbflash', frame.SettingsBG:getElement())
+	frame.flashCheckbox = EnKai.uiCreateFrame("nkCheckbox", 'cbflash', frame.SettingsBG)
 	frame.flashCheckbox:SetText("Enable Button Flash")
 	frame.flashCheckbox:SetChecked(rfsettings.flash)
 	frame.flashCheckbox:SetPoint("TOPLEFT", frame.lockCheckbox, "TOPLEFT", 0, 30)
@@ -1694,15 +1730,11 @@ function rf.UI:setupInstructionsTab()
 
 	local frame = self.frame.paneInstructionsTab
 
-	--frame.AboutBG = UI.CreateFrame ('nkExtTexture', 'RFPostPlayerBack', frame, {type = 'RaidFinder', path = 'gfx/TabPaneBG.png', width = 910, height = 400, anchors = {{ from = 'TOPLEFT', object = frame, to = "TOPLEFT", x = 7, y = 36}}})
-
 	local instmanual = EnKai.docEmbedded("Instructions", frame)
 	
 	instmanual:SetPoint("TOPLEFT", frame, "TOPLEFT",7,35)
-	--instmanual:SetTitle("Instructions")
 	instmanual:SetWidth(925)
 	instmanual:SetHeight(410)
-	--instmanual:SetDragable(false)
 		
 	local manual = { { 	parent = nil,
 						title = ") Adjusting the UI",
@@ -1810,14 +1842,11 @@ function rf.UI:setupPostTab()
 	local dps = ""
 	local support = ""
 	local heal =  ""
-
-	frame.PostPlayerBG = UI.CreateFrame ('nkExtTexture', 'RFPostPlayerBack', frame, {type = 'RaidFinder', path = 'gfx/TabPaneBG.png', width = 910, height = 200, anchors = {{ from = 'TOPLEFT', object = frame, to = "TOPLEFT", x = 7, y = 36}}})
 	
-	frame.PostRaidBG = UI.CreateFrame ('nkExtTexture', 'RFPostRaidBack', frame, {type = 'RaidFinder', path = 'gfx/TabPaneBG.png', width = 910, height = 200, anchors = {{ from = 'TOPLEFT', object = frame.PostPlayerBG:getElement(), to = "BOTTOMLEFT", x = 0, y = 0}}})
-	--[[
+
 	frame.PostPlayerBG = UI.CreateFrame('Texture', 'RFPostPlayerBack', frame)
 	frame.PostPlayerBG:SetLayer(1)
-	frame.PostPlayerBG:SetTextureAsync('RaidFinder', 'gfx/TabPaneBG.png')
+	frame.PostPlayerBG:SetTexture('RaidFinder', 'gfx/TabPaneBG.png')
 	frame.PostPlayerBG:SetWidth(910)
 	frame.PostPlayerBG:SetHeight(200)
 	frame.PostPlayerBG:SetPoint("TOPLEFT", frame, "TOPLEFT", 7, 36)
@@ -1825,46 +1854,49 @@ function rf.UI:setupPostTab()
 	
 	frame.PostRaidBG = UI.CreateFrame('Texture', 'RFPostRaidBack', frame)
 	frame.PostRaidBG:SetLayer(1)
-	frame.PostRaidBG:SetTextureAsync('RaidFinder', 'gfx/TabPaneBG.png')
+	frame.PostRaidBG:SetTexture('RaidFinder', 'gfx/TabPaneBG.png')
 	frame.PostRaidBG:SetWidth(910)
 	frame.PostRaidBG:SetHeight(200)
 	frame.PostRaidBG:SetPoint("TOPLEFT", frame.PostPlayerBG, "BOTTOMLEFT", 0, 1)
-	--]]
 	
 	--Player Setup
-	frame.namehead = UI.CreateFrame("Text", "RFpostplayername", frame.PostPlayerBG:getElement())
+	frame.namehead = UI.CreateFrame("Text", "RFpostplayername", frame.PostPlayerBG)
 	
-	frame.namehead:SetPoint("TOPLEFT", frame.PostPlayerBG:getElement(), "TOPLEFT",20,20)
+	frame.namehead:SetPoint("TOPLEFT", frame.PostPlayerBG, "TOPLEFT",20,20)
 	frame.namehead:SetText("Name:")
 	frame.namehead:SetFontSize(16)
 	frame.namehead:SetFontColor(0.906, 0.784, 0.471, 1)
 	frame.namehead:SetEffectGlow({ offsetX = 2, offsetY = 2})	
+	frame.namehead:SetLayer(2)
 	
-	frame.nametext = UI.CreateFrame("Text", "RFplayernametext", frame.PostPlayerBG:getElement())
+	frame.nametext = UI.CreateFrame("Text", "RFplayernametext", frame.PostPlayerBG)
 	
 	frame.nametext:SetPoint("TOPLEFT", frame.namehead, "TOPRIGHT", 5, 0)
 	frame.nametext:SetText(rfsettings.playerdata.name)
 	frame.nametext:SetFontSize(14)
 	frame.nametext:SetFontColor(1, 1, 1, 1)
+	frame.nametext:SetLayer(2)
 	
 	
 	
-	frame.classhead = UI.CreateFrame("Text", "RFpostplayerclass", frame.PostPlayerBG:getElement())
+	frame.classhead = UI.CreateFrame("Text", "RFpostplayerclass", frame.PostPlayerBG)
 	
 	frame.classhead:SetPoint("TOPLEFT", frame.namehead, "BOTTOMLEFT",0,5)
 	frame.classhead:SetText("Class:")
 	frame.classhead:SetFontSize(16)
 	frame.classhead:SetFontColor(0.906, 0.784, 0.471, 1)
 	frame.classhead:SetEffectGlow({ offsetX = 2, offsetY = 2})
+	frame.classhead:SetLayer(2)
 	
-	frame.classtext = UI.CreateFrame("Text", "RFplayerclasstext", frame.PostPlayerBG:getElement())
+	frame.classtext = UI.CreateFrame("Text", "RFplayerclasstext", frame.PostPlayerBG)
 	
 	frame.classtext:SetPoint("TOPLEFT", frame.classhead, "TOPRIGHT", 5, 0)
 	frame.classtext:SetText(rfsettings.playerdata.class)
 	frame.classtext:SetFontSize(14)
 	frame.classtext:SetFontColor(1, 1, 1, 1)
+	frame.classtext:SetLayer(2)
 	
-	frame.exphead = UI.CreateFrame("Text", "RFpostplayerexp", frame.PostPlayerBG:getElement())
+	frame.exphead = UI.CreateFrame("Text", "RFpostplayerexp", frame.PostPlayerBG)
 	
 	frame.exphead:SetPoint("TOPLEFT", frame.classhead, "BOTTOMLEFT",0,5)
 	frame.exphead:SetText("Experience:")
@@ -1872,14 +1904,14 @@ function rf.UI:setupPostTab()
 	frame.exphead:SetFontColor(0.906, 0.784, 0.471, 1)
 	frame.exphead:SetEffectGlow({ offsetX = 2, offsetY = 2})
 	
-	frame.exptext = UI.CreateFrame("Text", "RFplayerexptext", frame.PostPlayerBG:getElement())
+	frame.exptext = UI.CreateFrame("Text", "RFplayerexptext", frame.PostPlayerBG)
 	
 	frame.exptext:SetPoint("TOPLEFT", frame.exphead, "TOPRIGHT", 5, 0)
 	frame.exptext:SetText("[" .. (rfsettings.playerdata.achiev.tdq + rfsettings.playerdata.achiev.ft + rfsettings.playerdata.achiev.ee) .. "/13]" .. "[" .. (rfsettings.playerdata.achiev.ga + rfsettings.playerdata.achiev.ig + rfsettings.playerdata.achiev.pb) .. "/12]")
 	frame.exptext:SetFontSize(14)
 	frame.exptext:SetFontColor(1, 1, 1, 1)
 	
-	frame.hithead = UI.CreateFrame("Text", "RFpostplayerhit", frame.PostPlayerBG:getElement())
+	frame.hithead = UI.CreateFrame("Text", "RFpostplayerhit", frame.PostPlayerBG)
 	
 	frame.hithead:SetPoint("TOPLEFT", frame.exphead, "BOTTOMLEFT",0,5)
 	frame.hithead:SetText("Hit:")
@@ -1887,7 +1919,7 @@ function rf.UI:setupPostTab()
 	frame.hithead:SetFontColor(0.906, 0.784, 0.471, 1)
 	frame.hithead:SetEffectGlow({ offsetX = 2, offsetY = 2})
 	
-	frame.hittext = UI.CreateFrame("Text", "RFplayerhittext", frame.PostPlayerBG:getElement())
+	frame.hittext = UI.CreateFrame("Text", "RFplayerhittext", frame.PostPlayerBG)
 	
 	frame.hittext:SetPoint("TOPLEFT", frame.hithead, "TOPRIGHT", 5, 0)
 	frame.hittext:SetText(tostring(Inspect.Stat("hitUnbuffed")))
@@ -1895,7 +1927,7 @@ function rf.UI:setupPostTab()
 	frame.hittext:SetFontColor(1, 1, 1, 1)
 	
 	
-	frame.rolehead = UI.CreateFrame("Text", "RFpostplayerrole", frame.PostPlayerBG:getElement())
+	frame.rolehead = UI.CreateFrame("Text", "RFpostplayerrole", frame.PostPlayerBG)
 	
 	frame.rolehead:SetPoint("TOPLEFT", frame.hithead, "BOTTOMLEFT",0,5)
 	frame.rolehead:SetText("Roles:")
@@ -1903,7 +1935,7 @@ function rf.UI:setupPostTab()
 	frame.rolehead:SetFontColor(0.906, 0.784, 0.471, 1)
 	frame.rolehead:SetEffectGlow({ offsetX = 2, offsetY = 2})
 	
-	frame.tank = EnKai.uiCreateFrame("nkCheckbox", 'tank', frame.PostPlayerBG:getElement())
+	frame.tank = EnKai.uiCreateFrame("nkCheckbox", 'tank', frame.PostPlayerBG)
 	frame.tank:SetText("Tank")
 	frame.tank:SetChecked(rfsettings.playerdata.roles.tank)
 	frame.tank:SetPoint("TOPLEFT", frame.rolehead, "TOPRIGHT", 10, 0)
@@ -1913,7 +1945,7 @@ function rf.UI:setupPostTab()
 	frame.tank:SetLabelWidth(40)	
 	Command.Event.Attach(EnKai.events['tank'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'tank.CheckboxChanged')
 	
-	frame.heal = EnKai.uiCreateFrame("nkCheckbox", 'heal', frame.PostPlayerBG:getElement())
+	frame.heal = EnKai.uiCreateFrame("nkCheckbox", 'heal', frame.PostPlayerBG)
 	frame.heal:SetText("Heal")
 	frame.heal:SetChecked(rfsettings.playerdata.roles.heal)
 	frame.heal:SetPoint("TOPLEFT", frame.tank, "TOPRIGHT", 10, 0)
@@ -1923,7 +1955,7 @@ function rf.UI:setupPostTab()
 	frame.heal:SetLabelWidth(55)	
 	Command.Event.Attach(EnKai.events['heal'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'heal.CheckboxChanged')	
 	
-	frame.dps = EnKai.uiCreateFrame("nkCheckbox", 'dps', frame.PostPlayerBG:getElement())
+	frame.dps = EnKai.uiCreateFrame("nkCheckbox", 'dps', frame.PostPlayerBG)
 	frame.dps:SetText("DPS")
 	frame.dps:SetChecked(rfsettings.playerdata.roles.dps)
 	frame.dps:SetPoint("TOPLEFT", frame.rolehead, "TOPRIGHT", 10, 20)
@@ -1933,7 +1965,7 @@ function rf.UI:setupPostTab()
 	frame.dps:SetLabelWidth(40)	
 	Command.Event.Attach(EnKai.events['dps'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'dps.CheckboxChanged')
 	
-	frame.support = EnKai.uiCreateFrame("nkCheckbox", 'support', frame.PostPlayerBG:getElement())
+	frame.support = EnKai.uiCreateFrame("nkCheckbox", 'support', frame.PostPlayerBG)
 	frame.support:SetText("Support")
 	frame.support:SetChecked(rfsettings.playerdata.roles.support)
 	frame.support:SetPoint("TOPLEFT", frame.dps, "TOPRIGHT", 10, 0)
@@ -1943,15 +1975,15 @@ function rf.UI:setupPostTab()
 	frame.support:SetLabelWidth(55)	
 	Command.Event.Attach(EnKai.events['support'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'support.CheckboxChanged')		
 	
-	frame.lookingforhead = UI.CreateFrame("Text", "RFpostplayerlookingfor", frame.PostPlayerBG:getElement())
+	frame.lookingforhead = UI.CreateFrame("Text", "RFpostplayerlookingfor", frame.PostPlayerBG)
 	
-	frame.lookingforhead:SetPoint("TOPLEFT", frame.PostPlayerBG:getElement(), "TOPLEFT",250,20)
+	frame.lookingforhead:SetPoint("TOPLEFT", frame.PostPlayerBG, "TOPLEFT",250,20)
 	frame.lookingforhead:SetText("Looking For:")
 	frame.lookingforhead:SetFontSize(16)
 	frame.lookingforhead:SetFontColor(0.906, 0.784, 0.471, 1)
 	frame.lookingforhead:SetEffectGlow({ offsetX = 2, offsetY = 2})	
 	
-	frame.LFTDQ = EnKai.uiCreateFrame("nkCheckbox", 'LFTDQ', frame.PostPlayerBG:getElement())
+	frame.LFTDQ = EnKai.uiCreateFrame("nkCheckbox", 'LFTDQ', frame.PostPlayerBG)
 	frame.LFTDQ:SetText("TDQ")
 	frame.LFTDQ:SetChecked(rfsettings.playerdata.lookingfor.tdq)
 	frame.LFTDQ:SetPoint("TOPLEFT", frame.lookingforhead, "BOTTOMLEFT", 0, 5)
@@ -1961,7 +1993,7 @@ function rf.UI:setupPostTab()
 	frame.LFTDQ:SetLabelWidth(40)
 	Command.Event.Attach(EnKai.events['LFTDQ'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'LFTDQ.CheckboxChanged')
 	
-	frame.LFFT = EnKai.uiCreateFrame("nkCheckbox", 'LFFT', frame.PostPlayerBG:getElement())
+	frame.LFFT = EnKai.uiCreateFrame("nkCheckbox", 'LFFT', frame.PostPlayerBG)
 	frame.LFFT:SetText("FT")
 	frame.LFFT:SetChecked(rfsettings.playerdata.lookingfor.ft)
 	frame.LFFT:SetPoint("TOPLEFT", frame.LFTDQ, "BOTTOMLEFT", 0, 5)
@@ -1971,7 +2003,7 @@ function rf.UI:setupPostTab()
 	frame.LFFT:SetLabelWidth(40)
 	Command.Event.Attach(EnKai.events['LFFT'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'LFFT.CheckboxChanged')
 	
-	frame.LFEE = EnKai.uiCreateFrame("nkCheckbox", 'LFEE', frame.PostPlayerBG:getElement())
+	frame.LFEE = EnKai.uiCreateFrame("nkCheckbox", 'LFEE', frame.PostPlayerBG)
 	frame.LFEE:SetText("EE")
 	frame.LFEE:SetChecked(rfsettings.playerdata.lookingfor.ee)
 	frame.LFEE:SetPoint("TOPLEFT", frame.LFFT, "BOTTOMLEFT", 0, 5)
@@ -1981,7 +2013,7 @@ function rf.UI:setupPostTab()
 	frame.LFEE:SetLabelWidth(40)
 	Command.Event.Attach(EnKai.events['LFEE'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'LFEE.CheckboxChanged')
 	
-	frame.LFGA = EnKai.uiCreateFrame("nkCheckbox", 'LFGA', frame.PostPlayerBG:getElement())
+	frame.LFGA = EnKai.uiCreateFrame("nkCheckbox", 'LFGA', frame.PostPlayerBG)
 	frame.LFGA:SetText("GA")
 	frame.LFGA:SetChecked(rfsettings.playerdata.lookingfor.ga)
 	frame.LFGA:SetPoint("TOPLEFT", frame.LFEE, "BOTTOMLEFT", 0, 5)
@@ -1991,7 +2023,7 @@ function rf.UI:setupPostTab()
 	frame.LFGA:SetLabelWidth(40)
 	Command.Event.Attach(EnKai.events['LFGA'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'LFGA.CheckboxChanged')
 	
-	frame.LFIG = EnKai.uiCreateFrame("nkCheckbox", 'LFIG', frame.PostPlayerBG:getElement())
+	frame.LFIG = EnKai.uiCreateFrame("nkCheckbox", 'LFIG', frame.PostPlayerBG)
 	frame.LFIG:SetText("IG")
 	frame.LFIG:SetChecked(rfsettings.playerdata.lookingfor.ig)
 	frame.LFIG:SetPoint("TOPLEFT", frame.LFGA, "BOTTOMLEFT", 0, 5)
@@ -2001,7 +2033,7 @@ function rf.UI:setupPostTab()
 	frame.LFIG:SetLabelWidth(40)
 	Command.Event.Attach(EnKai.events['LFIG'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'LFIG.CheckboxChanged')
 	
-	frame.LFPB = EnKai.uiCreateFrame("nkCheckbox", 'LFPB', frame.PostPlayerBG:getElement())
+	frame.LFPB = EnKai.uiCreateFrame("nkCheckbox", 'LFPB', frame.PostPlayerBG)
 	frame.LFPB:SetText("PB")
 	frame.LFPB:SetChecked(rfsettings.playerdata.lookingfor.pb)
 	frame.LFPB:SetPoint("TOPLEFT", frame.LFIG, "BOTTOMLEFT", 0, 5)
@@ -2011,7 +2043,7 @@ function rf.UI:setupPostTab()
 	frame.LFPB:SetLabelWidth(40)
 	Command.Event.Attach(EnKai.events['LFPB'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'LFPB.CheckboxChanged')
 	
-	frame.LFOLD = EnKai.uiCreateFrame("nkCheckbox", 'LFOLD', frame.PostPlayerBG:getElement())
+	frame.LFOLD = EnKai.uiCreateFrame("nkCheckbox", 'LFOLD', frame.PostPlayerBG)
 	frame.LFOLD:SetText("Old World")
 	frame.LFOLD:SetChecked(rfsettings.playerdata.lookingfor.old)
 	frame.LFOLD:SetPoint("TOPLEFT", frame.LFPB, "BOTTOMLEFT", 0, 5)
@@ -2021,7 +2053,7 @@ function rf.UI:setupPostTab()
 	frame.LFOLD:SetLabelWidth(70)
 	Command.Event.Attach(EnKai.events['LFOLD'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'LFOLD.CheckboxChanged')
 
-	frame.LFEXP = EnKai.uiCreateFrame("nkCheckbox", 'LFEXP', frame.PostPlayerBG:getElement())
+	frame.LFEXP = EnKai.uiCreateFrame("nkCheckbox", 'LFEXP', frame.PostPlayerBG)
 	frame.LFEXP:SetText("Experts")
 	frame.LFEXP:SetChecked(rfsettings.playerdata.lookingfor.exp)
 	frame.LFEXP:SetPoint("TOPLEFT", frame.LFTDQ, "TOPRIGHT", 10, 0)
@@ -2031,7 +2063,7 @@ function rf.UI:setupPostTab()
 	frame.LFEXP:SetLabelWidth(70)	
 	Command.Event.Attach(EnKai.events['LFEXP'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'LFEXP.CheckboxChanged')
 	
-	frame.LFDRR = EnKai.uiCreateFrame("nkCheckbox", 'LFDRR', frame.PostPlayerBG:getElement())
+	frame.LFDRR = EnKai.uiCreateFrame("nkCheckbox", 'LFDRR', frame.PostPlayerBG)
 	frame.LFDRR:SetText("DRR")
 	frame.LFDRR:SetChecked(rfsettings.playerdata.lookingfor.drr)
 	frame.LFDRR:SetPoint("TOPLEFT", frame.LFEXP, "BOTTOMLEFT", 0, 5)
@@ -2041,7 +2073,7 @@ function rf.UI:setupPostTab()
 	frame.LFDRR:SetLabelWidth(70)	
 	Command.Event.Attach(EnKai.events['LFDRR'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'LFDRR.CheckboxChanged')
 	
-	frame.LFGH = EnKai.uiCreateFrame("nkCheckbox", 'LFGH', frame.PostPlayerBG:getElement())
+	frame.LFGH = EnKai.uiCreateFrame("nkCheckbox", 'LFGH', frame.PostPlayerBG)
 	frame.LFGH:SetText("Great Hunt")
 	frame.LFGH:SetChecked(rfsettings.playerdata.lookingfor.gh)
 	frame.LFGH:SetPoint("TOPLEFT", frame.LFDRR, "BOTTOMLEFT", 0, 5)
@@ -2051,7 +2083,7 @@ function rf.UI:setupPostTab()
 	frame.LFGH:SetLabelWidth(70)
 	Command.Event.Attach(EnKai.events['LFGH'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'LFGH.CheckboxChanged')
 	
-	frame.LFSH = EnKai.uiCreateFrame("nkCheckbox", 'LFSH', frame.PostPlayerBG:getElement())
+	frame.LFSH = EnKai.uiCreateFrame("nkCheckbox", 'LFSH', frame.PostPlayerBG)
 	frame.LFSH:SetText("Stronghold")
 	frame.LFSH:SetChecked(rfsettings.playerdata.lookingfor.sh)
 	frame.LFSH:SetPoint("TOPLEFT", frame.LFGH, "BOTTOMLEFT", 0, 5)
@@ -2061,7 +2093,7 @@ function rf.UI:setupPostTab()
 	frame.LFSH:SetLabelWidth(70)
 	Command.Event.Attach(EnKai.events['LFSH'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'LFSH.CheckboxChanged')
 	
-	frame.LFWB = EnKai.uiCreateFrame("nkCheckbox", 'LFWB', frame.PostPlayerBG:getElement())
+	frame.LFWB = EnKai.uiCreateFrame("nkCheckbox", 'LFWB', frame.PostPlayerBG)
 	frame.LFWB:SetText("World Boss")
 	frame.LFWB:SetChecked(rfsettings.playerdata.lookingfor.wb)
 	frame.LFWB:SetPoint("TOPLEFT", frame.LFSH, "BOTTOMLEFT", 0, 5)
@@ -2071,7 +2103,7 @@ function rf.UI:setupPostTab()
 	frame.LFWB:SetLabelWidth(70)
 	Command.Event.Attach(EnKai.events['LFWB'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'LFWB.CheckboxChanged')
 	
-	frame.LFWF = EnKai.uiCreateFrame("nkCheckbox", 'LFWF', frame.PostPlayerBG:getElement())
+	frame.LFWF = EnKai.uiCreateFrame("nkCheckbox", 'LFWF', frame.PostPlayerBG)
 	frame.LFWF:SetText("Warfront")
 	frame.LFWF:SetChecked(rfsettings.playerdata.lookingfor.wf)
 	frame.LFWF:SetPoint("TOPLEFT", frame.LFWB, "BOTTOMLEFT", 0, 5)
@@ -2081,7 +2113,7 @@ function rf.UI:setupPostTab()
 	frame.LFWF:SetLabelWidth(70)
 	Command.Event.Attach(EnKai.events['LFWF'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'LFWF.CheckboxChanged')
 	
-	frame.LFCQ = EnKai.uiCreateFrame("nkCheckbox", 'LFCQ', frame.PostPlayerBG:getElement())
+	frame.LFCQ = EnKai.uiCreateFrame("nkCheckbox", 'LFCQ', frame.PostPlayerBG)
 	frame.LFCQ:SetText("CQ")
 	frame.LFCQ:SetChecked(rfsettings.playerdata.lookingfor.cq)
 	frame.LFCQ:SetPoint("TOPLEFT", frame.LFOLD, "TOPRIGHT", 10, 0)
@@ -2091,7 +2123,7 @@ function rf.UI:setupPostTab()
 	frame.LFCQ:SetLabelWidth(40)	
 	Command.Event.Attach(EnKai.events['LFCQ'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'LFCQ.CheckboxChanged')
 	
-	frame.LFMISC = EnKai.uiCreateFrame("nkCheckbox", 'LFMISC', frame.PostPlayerBG:getElement())
+	frame.LFMISC = EnKai.uiCreateFrame("nkCheckbox", 'LFMISC', frame.PostPlayerBG)
 	frame.LFMISC:SetText("MISC.")
 	frame.LFMISC:SetChecked(rfsettings.playerdata.lookingfor.misc)
 	frame.LFMISC:SetPoint("TOPLEFT", frame.LFEXP, "TOPRIGHT", 10, 0)
@@ -2101,9 +2133,9 @@ function rf.UI:setupPostTab()
 	frame.LFMISC:SetLabelWidth(50)
 	Command.Event.Attach(EnKai.events['LFMISC'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'LFMISC.CheckboxChanged')
 	
-	frame.notehead = UI.CreateFrame("Text", "RFpostplayerNoteHead", frame.PostPlayerBG:getElement())
+	frame.notehead = UI.CreateFrame("Text", "RFpostplayerNoteHead", frame.PostPlayerBG)
 	
-	frame.notehead:SetPoint("TOPLEFT", frame.PostPlayerBG:getElement(), "TOPLEFT",550,20)
+	frame.notehead:SetPoint("TOPLEFT", frame.PostPlayerBG, "TOPLEFT",550,20)
 	frame.notehead:SetText("Note:")
 	frame.notehead:SetFontSize(16)
 	frame.notehead:SetFontColor(0.906, 0.784, 0.471, 1)
@@ -2122,7 +2154,7 @@ function rf.UI:setupPostTab()
 	
 	Command.Event.Attach(EnKai.events['RFPlayerNotetext'].TextfieldChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'RFPlayerNotetext.TextfieldChanged')
 	
-	frame.noteinfo = EnKai.ui.nkInfoText("RFpostplayernoteinfo", frame.PostPlayerBG:getElement())
+	frame.noteinfo = EnKai.ui.nkInfoText("RFpostplayernoteinfo", frame.PostPlayerBG)
 	frame.noteinfo:SetPoint("TOPLEFT", frame.notetext, "BOTTOMLEFT", 0, 5)
 	frame.noteinfo:SetType("info")
 	frame.noteinfo:SetText("Press 'Enter' to save note.")
@@ -2135,7 +2167,7 @@ function rf.UI:setupPostTab()
 
 	frame.btPlayerPost:SetScale(.8)
 	frame.btPlayerPost:SetText("LFG - Post")
-	frame.btPlayerPost:SetPoint ("BOTTOMRIGHT", frame.PostPlayerBG:getElement(), "BOTTOMRIGHT", -10, -20)
+	frame.btPlayerPost:SetPoint ("BOTTOMRIGHT", frame.PostPlayerBG, "BOTTOMRIGHT", -10, -20)
 	frame.btPlayerPost:SetLayer(5)
 	frame.btPlayerPost:SetColor(.20, .65, .20, 1)
 	frame.btPlayerPost:SetFontColor(0,0,0,1)
@@ -2144,7 +2176,9 @@ function rf.UI:setupPostTab()
 		frame.exptext:SetText("[" .. (rfsettings.playerdata.achiev.tdq + rfsettings.playerdata.achiev.ft + rfsettings.playerdata.achiev.ee) .. "/13]" .. "[" .. (rfsettings.playerdata.achiev.ga + rfsettings.playerdata.achiev.ig + rfsettings.playerdata.achiev.pb) .. "/12]")
 		frame.hittext:SetText(tostring(Inspect.Stat("hitUnbuffed")))
 		rf.playerdata()
-		rf.playerpost()	
+		rf.playerpost()
+		rf.broadcasttype = "player"
+		print("Posted!")
 	end, "RFbtPlayerPost.Left.Click")	
 	
 	frame.btPlayerPost:EventAttach(Event.UI.Input.Mouse.Left.Down, function (self)		
@@ -2165,22 +2199,22 @@ function rf.UI:setupPostTab()
 	
 	--Raid Setup
 	
-	frame.raidnamehead = UI.CreateFrame("Text", "RFpostraidname", frame.PostRaidBG:getElement())
+	frame.raidnamehead = UI.CreateFrame("Text", "RFpostraidname", frame.PostRaidBG)
 	
-	frame.raidnamehead:SetPoint("TOPLEFT", frame.PostRaidBG:getElement(), "TOPLEFT",20,20)
+	frame.raidnamehead:SetPoint("TOPLEFT", frame.PostRaidBG, "TOPLEFT",20,20)
 	frame.raidnamehead:SetText("Leader:")
 	frame.raidnamehead:SetFontSize(16)
 	frame.raidnamehead:SetFontColor(0.906, 0.784, 0.471, 1)
 	frame.raidnamehead:SetEffectGlow({ offsetX = 2, offsetY = 2})	
 	
-	frame.raidnametext = UI.CreateFrame("Text", "RFraidnametext", frame.PostRaidBG:getElement())
+	frame.raidnametext = UI.CreateFrame("Text", "RFraidnametext", frame.PostRaidBG)
 	
 	frame.raidnametext:SetPoint("TOPLEFT", frame.raidnamehead, "BOTTOMLEFT", 0, 5)
 	frame.raidnametext:SetText(rfsettings.raiddata.name)
 	frame.raidnametext:SetFontSize(14)
 	frame.raidnametext:SetFontColor(1, 1, 1, 1)
 	
-	frame.raidrolehead = UI.CreateFrame("Text", "RFpostraidrole", frame.PostRaidBG:getElement())
+	frame.raidrolehead = UI.CreateFrame("Text", "RFpostraidrole", frame.PostRaidBG)
 	
 	frame.raidrolehead:SetPoint("TOPLEFT", frame.raidnametext, "BOTTOMLEFT",0,5)
 	frame.raidrolehead:SetText("Roles Needed:")
@@ -2188,7 +2222,7 @@ function rf.UI:setupPostTab()
 	frame.raidrolehead:SetFontColor(0.906, 0.784, 0.471, 1)
 	frame.raidrolehead:SetEffectGlow({ offsetX = 2, offsetY = 2})
 	
-	frame.raidtank = EnKai.uiCreateFrame("nkCheckbox", 'raidtank', frame.PostRaidBG:getElement())
+	frame.raidtank = EnKai.uiCreateFrame("nkCheckbox", 'raidtank', frame.PostRaidBG)
 	frame.raidtank:SetText("Tank")
 	frame.raidtank:SetChecked(rfsettings.raiddata.roles.tank)
 	frame.raidtank:SetPoint("TOPLEFT", frame.raidrolehead, "BOTTOMLEFT", 0, 5)
@@ -2198,7 +2232,7 @@ function rf.UI:setupPostTab()
 	frame.raidtank:SetLabelWidth(40)	
 	Command.Event.Attach(EnKai.events['raidtank'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'raidtank.CheckboxChanged')
 	
-	frame.raidheal = EnKai.uiCreateFrame("nkCheckbox", 'raidheal', frame.PostRaidBG:getElement())
+	frame.raidheal = EnKai.uiCreateFrame("nkCheckbox", 'raidheal', frame.PostRaidBG)
 	frame.raidheal:SetText("Heal")
 	frame.raidheal:SetChecked(rfsettings.raiddata.roles.heal)
 	frame.raidheal:SetPoint("TOPLEFT", frame.raidtank, "TOPRIGHT", 10, 0)
@@ -2208,7 +2242,7 @@ function rf.UI:setupPostTab()
 	frame.raidheal:SetLabelWidth(55)	
 	Command.Event.Attach(EnKai.events['raidheal'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'raidheal.CheckboxChanged')	
 	
-	frame.raiddps = EnKai.uiCreateFrame("nkCheckbox", 'raiddps', frame.PostRaidBG:getElement())
+	frame.raiddps = EnKai.uiCreateFrame("nkCheckbox", 'raiddps', frame.PostRaidBG)
 	frame.raiddps:SetText("DPS")
 	frame.raiddps:SetChecked(rfsettings.raiddata.roles.dps)
 	frame.raiddps:SetPoint("TOPLEFT", frame.raidtank, "BOTTOMLEFT", 0, 5)
@@ -2218,7 +2252,7 @@ function rf.UI:setupPostTab()
 	frame.raiddps:SetLabelWidth(40)	
 	Command.Event.Attach(EnKai.events['raiddps'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'raiddps.CheckboxChanged')
 	
-	frame.raidsupport = EnKai.uiCreateFrame("nkCheckbox", 'raidsupport', frame.PostRaidBG:getElement())
+	frame.raidsupport = EnKai.uiCreateFrame("nkCheckbox", 'raidsupport', frame.PostRaidBG)
 	frame.raidsupport:SetText("Support")
 	frame.raidsupport:SetChecked(rfsettings.raiddata.roles.support)
 	frame.raidsupport:SetPoint("TOPLEFT", frame.raiddps, "TOPRIGHT", 10, 0)
@@ -2228,9 +2262,9 @@ function rf.UI:setupPostTab()
 	frame.raidsupport:SetLabelWidth(55)	
 	Command.Event.Attach(EnKai.events['raidsupport'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'raidsupport.CheckboxChanged')	
 	
-	frame.typehead = UI.CreateFrame("Text", "RFpostraidtype", frame.PostRaidBG:getElement())
+	frame.typehead = UI.CreateFrame("Text", "RFpostraidtype", frame.PostRaidBG)
 	
-	frame.typehead:SetPoint("TOPLEFT", frame.PostRaidBG:getElement(), "TOPLEFT",200,20)
+	frame.typehead:SetPoint("TOPLEFT", frame.PostRaidBG, "TOPLEFT",200,20)
 	frame.typehead:SetText("Raid Type:")
 	frame.typehead:SetFontSize(16)
 	frame.typehead:SetFontColor(0.906, 0.784, 0.471, 1)
@@ -2238,7 +2272,7 @@ function rf.UI:setupPostTab()
 	
 	local typeselection = rf.gridData.selection["RaidType"]
 		
-	frame.typeselection = EnKai.uiCreateFrame("nkCombobox", 'PostRaidType', frame.PostRaidBG:getElement())
+	frame.typeselection = EnKai.uiCreateFrame("nkCombobox", 'PostRaidType', frame.PostRaidBG)
 	frame.typeselection:SetPoint("TOPLEFT", frame.typehead, "BOTTOMLEFT", 0, 5)
 	frame.typeselection:SetWidth(100)
 	frame.typeselection:SetLabelWidth(0)
@@ -2249,7 +2283,7 @@ function rf.UI:setupPostTab()
 	frame.typeselection:SetLayer(20)
 	Command.Event.Attach(EnKai.events['PostRaidType'].ComboChanged, function (_, newValue)	rf.lookingforupdate(frame) end, 'PostRaidType.ComboChanged')
 	
-	frame.loothead = UI.CreateFrame("Text", "RFpostraidloot", frame.PostRaidBG:getElement())
+	frame.loothead = UI.CreateFrame("Text", "RFpostraidloot", frame.PostRaidBG)
 	
 	frame.loothead:SetPoint("TOPLEFT", frame.typehead, "TOPRIGHT",40,0)
 	frame.loothead:SetText("Loot Type:")
@@ -2259,7 +2293,7 @@ function rf.UI:setupPostTab()
 	
 	local lootselection = rf.gridData.selection["RaidLoot"]
 		
-	frame.lootselection = EnKai.uiCreateFrame("nkCombobox", 'PostRaidLoot', frame.PostRaidBG:getElement())
+	frame.lootselection = EnKai.uiCreateFrame("nkCombobox", 'PostRaidLoot', frame.PostRaidBG)
 	frame.lootselection:SetPoint("TOPLEFT", frame.loothead, "BOTTOMLEFT", 0, 5)
 	frame.lootselection:SetWidth(100)
 	frame.lootselection:SetLabelWidth(0)
@@ -2270,15 +2304,15 @@ function rf.UI:setupPostTab()
 	frame.lootselection:SetLayer(20)
 	Command.Event.Attach(EnKai.events['PostRaidLoot'].ComboChanged, function (_, newValue)	rf.lookingforupdate(frame) end, 'PostRaidLoot.ComboChanged')
 	
-	frame.raidnotehead = UI.CreateFrame("Text", "RFpostraidNoteHead", frame.PostRaidBG:getElement())
+	frame.raidnotehead = UI.CreateFrame("Text", "RFpostraidNoteHead", frame.PostRaidBG)
 	
-	frame.raidnotehead:SetPoint("TOPLEFT", frame.PostRaidBG:getElement(), "TOPLEFT",450,20)
+	frame.raidnotehead:SetPoint("TOPLEFT", frame.PostRaidBG, "TOPLEFT",450,20)
 	frame.raidnotehead:SetText("Note:")
 	frame.raidnotehead:SetFontSize(16)
 	frame.raidnotehead:SetFontColor(0.906, 0.784, 0.471, 1)
 	frame.raidnotehead:SetEffectGlow({ offsetX = 2, offsetY = 2})
 	
-	frame.raidnotetext = EnKai.uiCreateFrame("nkTextfield", 'RFRaidNotetext', frame.PostRaidBG:getElement())	
+	frame.raidnotetext = EnKai.uiCreateFrame("nkTextfield", 'RFRaidNotetext', frame.PostRaidBG)	
 	frame.raidnotetext:SetPoint("TOPLEFT", frame.raidnotehead, "BOTTOMLEFT", 0, 5)
 	frame.raidnotetext:SetWidth(400)
 	frame.raidnotetext:SetHeight(22)
@@ -2288,13 +2322,13 @@ function rf.UI:setupPostTab()
 	
 	Command.Event.Attach(EnKai.events['RFRaidNotetext'].TextfieldChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'RFRaidNotetext.TextfieldChanged')
 	
-	frame.raidnoteinfo = EnKai.ui.nkInfoText("RFpostraidnoteinfo", frame.PostRaidBG:getElement())
+	frame.raidnoteinfo = EnKai.ui.nkInfoText("RFpostraidnoteinfo", frame.PostRaidBG)
 	frame.raidnoteinfo:SetPoint("TOPLEFT", frame.raidnotetext, "BOTTOMLEFT", 0, 5)
 	frame.raidnoteinfo:SetType("info")
 	frame.raidnoteinfo:SetText("Press 'Enter' to save note.")
 	frame.raidnoteinfo:SetWidth(200)
 	
-	frame.channelhead = UI.CreateFrame("Text", "RFchannelhead", frame.PostRaidBG:getElement())
+	frame.channelhead = UI.CreateFrame("Text", "RFchannelhead", frame.PostRaidBG)
 	
 	frame.channelhead:SetPoint("TOPLEFT", frame.raidnoteinfo, "BOTTOMLEFT", 0, 15)
 	frame.channelhead:SetText("Broadcast your raid in chat channel #:")
@@ -2303,7 +2337,7 @@ function rf.UI:setupPostTab()
 	frame.channelhead:SetWordwrap(true)
 	frame.channelhead:SetWidth(130)
 	
-	frame.channeltext = EnKai.uiCreateFrame("nkTextfield", 'RFchanneltext', frame.PostRaidBG:getElement())	
+	frame.channeltext = EnKai.uiCreateFrame("nkTextfield", 'RFchanneltext', frame.PostRaidBG)	
 	frame.channeltext:SetPoint("TOPLEFT", frame.channelhead, "BOTTOMRIGHT", -10, -20)
 	frame.channeltext:SetWidth(30)
 	frame.channeltext:SetHeight(22)
@@ -2325,7 +2359,7 @@ function rf.UI:setupPostTab()
 
 	frame.btRaidPost:SetScale(.8)
 	frame.btRaidPost:SetText("LFM - Post")
-	frame.btRaidPost:SetPoint ("BOTTOMRIGHT", frame.PostRaidBG:getElement(), "BOTTOMRIGHT", -10, -20)
+	frame.btRaidPost:SetPoint ("BOTTOMRIGHT", frame.PostRaidBG, "BOTTOMRIGHT", -10, -20)
 	frame.btRaidPost:SetLayer(5)
 	frame.btRaidPost:SetColor(.20, .65, .20, 1)
 	frame.btRaidPost:SetFontColor(0,0,0,1)
@@ -2333,6 +2367,8 @@ function rf.UI:setupPostTab()
 	frame.btRaidPost:EventAttach(Event.UI.Input.Mouse.Left.Click, function ()
 		rf.playerdata() 
 		rf.raidpost()
+		rf.broadcasttype = "raid"
+		print("Posted!")
 		
 		local raid = frame.typeselection:GetSelectedLabel()
 		local loot = frame.lootselection:GetSelectedLabel()
@@ -2364,6 +2400,7 @@ function rf.UI:setupPostTab()
 			frame.btRaidPost:SetSecureMode("restricted")
 			frame.btRaidPost:EventMacroSet(Event.UI.Input.Mouse.Left.Click, macro)
 		else
+			frame.btRaidPost:SetSecureMode("restricted")
 			frame.btRaidPost:EventMacroSet(Event.UI.Input.Mouse.Left.Click, "")
 		end
 		
@@ -2395,6 +2432,7 @@ function rf.UI:setupPostTab()
 	
 	frame.stopButton:EventAttach(Event.UI.Input.Mouse.Left.Click, function ()
 		rf.broadcasting = false
+		rf.broadcasttype = ""
 		
 		print("Stopped All Posts")
 	end, "PostTabStop.Left.Click")	
@@ -2450,15 +2488,7 @@ function rf.UI:setupStatusTab()
 	
 	
 	--Player Status
---[[
-	--Grid Background
-	frame.gridBG = UI.CreateFrame('Texture', 'RFPlayerstatusGridBack', frame)
-	frame.gridBG:SetLayer(2)
-	frame.gridBG:SetTextureAsync('RaidFinder', 'gfx/databaseGridBG.png')
-	frame.gridBG:SetWidth(910)
-	frame.gridBG:SetHeight(200)
-	frame.gridBG:SetPoint("TOPLEFT", frame.StatusPlayerBG, "TOPLEFT", 0, -5)
---]]
+
 	--Grid
 	frame.grid = EnKai.uiCreateFrame("nkGrid", 'RFPlayerstatusGrid', frame)
 		
@@ -2468,7 +2498,6 @@ function rf.UI:setupStatusTab()
 	frame.grid:SetBodyColor(.133, .133, .133, 1)
 	frame.grid:SetBodyHighlightColor(.266, .266, .266, 1)
 	frame.grid:SetLabelHighlightColor(1, 1, 1, 1)
-	--frame.grid:SetTransparentHeader()
 	frame.grid:SetSelectable(true)
 	frame.grid:SetLayer(3)
 	frame.grid:SetHeaderHeight(30)
@@ -2535,7 +2564,6 @@ function rf.UI:setupStatusTab()
 	frame.raidgrid:SetBodyColor(.133, .133, .133, 1)
 	frame.raidgrid:SetBodyHighlightColor(.266, .266, .266, 1)
 	frame.raidgrid:SetLabelHighlightColor(1, 1, 1, 1)
-	--frame.raidgrid:SetTransparentHeader()
 	frame.raidgrid:SetSelectable(true)
 	frame.raidgrid:SetLayer(3)
 	frame.raidgrid:SetHeaderHeight(30)
@@ -2784,12 +2812,6 @@ function rf.StatusgridUpdate(frame, grid)
 		
 			table.insert (thisValue, {key = k, value = roleslist, color = {1,1,1,1}})
 			
-			--achlist = ("[" .. (v.achiev.tdq + v.achiev.ft + v.achiev.ee) .. "/13]" .. "[" .. (v.achiev.ga + v.achiev.ig + v.achiev.pb) .. "/12]")  
-		
-			--table.insert (thisValue, {key = k, value = achlist, color = {1,1,1,1}})
-			
-			
-
 			table.insert (thisValue, {key = k, value = v.note, color = {1,1,1,1}})
 			
 			table.insert (thisValue, {key = k, value = v.status, color = {1,1,1,1}})
@@ -3142,6 +3164,8 @@ function rf.RaidgridUpdate(frame, grid)
 			table.insert (thisValue, {key = k, value = roleslist, color = {1,1,1,1}})
 
 			table.insert (thisValue, {key = k, value = v.note, color = {1,1,1,1}})
+			
+			table.insert (thisValue, {key = k, value = v.size, color = {1,1,1,1}})
 
 			table.insert (values, thisValue)
 
@@ -3216,18 +3240,6 @@ function rf.UI:addonButton()
 	flashtexture:SetLayer(3)
 
 	
-	--[[
-	local menu = EnKai.uiCreateFrame("nkMenu", 'RFmenu', button)
-		
-	menu:SetFontSize(13)
-	menu:SetWidth(120)
-	menu:SetBackgroundColor(0.208, 0.208, 0.208, 1)
-	menu:SetLabelColor(1, 1, 1, 1)
-	menu:SetBorderColor(0, 0, 0, 1)
-	menu:SetPoint("TOPRIGHT", button, "CENTER", -10, 0)
-	menu:SetVisible(false)
-	--]]
-	
 	local items = {}
 	local subMenus
 	
@@ -3238,74 +3250,6 @@ function rf.UI:addonButton()
 				rf.open()
 			end
 	end, "RFbutton.Left.Click")	
-	--[[
-	function button:AddAddon(addonName, subMenuItems, mainFunc)
-
-		if subMenuItems == nil then
-			menu:AddEntry ({ closeOnClick = true, label = addonName, callBack = function () button:CloseAllMenus(); mainFunc() end })
-		else
-			
-			local newSubMenu = EnKai.uiCreateFrame("nkMenu", 'EnKai.managerMenu' .. addonName, button)
-			newSubMenu:SetFontSize(13)
-			newSubMenu:SetWidth(100)
-			newSubMenu:SetBackgroundColor(0.208, 0.208, 0.208, 1)
-			newSubMenu:SetLabelColor(1, 1, 1, 1)
-			newSubMenu:SetBorderColor(0, 0, 0, 1)
-			newSubMenu:SetVisible(false)
-			
-			local showSubMenu = function ()
-				for k, v in pairs (subMenus) do v:SetVisible(false) end
-				
-				if newSubMenu:GetVisible() == true then 
-					newSubMenu:SetVisible(false) 
-				elseif newSubMenu:GetEntryCount() > 0 then
-					newSubMenu:SetVisible(true) 
-				end 
-			end
-			
-			for k, v in pairs(subMenuItems) do				
-				if v.seperator == true then
-					newSubMenu:AddSeparator()					
-				elseif v.callBack ~= nil then
-					newSubMenu:AddEntry({ closeOnClick = true, label = v.label, macro = v.macro, callBack = function() button:CloseAllMenus(); v.callBack() end })
-				else
-					newSubMenu:AddEntry({ closeOnClick = true, label = v.label, macro = v.macro, callBack = function() button:CloseAllMenus() end })
-				end
-			end
-						
-			local mainMenuItems = menu:GetEntries()
-			
-			if #mainMenuItems > 0 then
-				newSubMenu:SetPoint("TOPRIGHT", mainMenuItems[#mainMenuItems], "TOPLEFT", 0, 18)
-			else
-				newSubMenu:SetPoint("TOPRIGHT", menu, "TOPLEFT")
-			end
-			
-			if subMenus == nil then subMenus = {} end
-			table.insert(subMenus, newSubMenu)
-			
-			menu:AddEntry ( { subMenu = true, label = addonName, callBack = function () showSubMenu() end } )
-		end	
-		
-	end	
-	
-	function button:CloseAllMenus ()
-		if subMenus ~= nil then
-			for k, v in pairs (subMenus) do
-				v:SetVisible(false)
-			end
-		end
-		menu:SetVisible(false)
-	end
-	
-	function button:ToggleMenu()
-		if menu:GetVisible() == true then 
-			menu:SetVisible(false) 
-		elseif menu:GetEntryCount() > 0 then
-			menu:SetVisible(true) 
-		end 
-	end
-	--]]
 	
 	local startY = rfsettings.aButtonY
 	local startX = rfsettings.aButtonX
@@ -3383,7 +3327,6 @@ function rf.UI:addonButton()
 		
 	end, "RaidFinder.Wheel.Back")	
 	
-	--return button, texture, flashtexture
 	
 end
 
@@ -3392,19 +3335,6 @@ end
 function rf.testtable()
 
 
-
---[[	rfsettings.playerdata.type = "player"
-	local data = rfsettings.playerdata
-
-	for idx = 1, 25, 1 do
-
-		data.name = ("Vexxx" .. idx)
-		local serialized = Utility.Serialize.Inline(data)
-		local compressed = zlib.deflate()(serialized, "finish")
-
-		
-		rf.broadcast(compressed)
-	end--]]
 end
 
 
