@@ -2372,29 +2372,64 @@ function rf.UI:setupPostTab()
 		
 		local raid = frame.typeselection:GetSelectedLabel()
 		local loot = frame.lootselection:GetSelectedLabel()
+		
+		local t = false
+		local h = false
+		local d = false
 
 		if rfsettings.raiddata.roles.tank == true then
-			tank = "|Tank|"
+			tank = "Tank"
+			t = true			
 		end
 
-		if rfsettings.raiddata.roles.heal == true then
-			heal = "|Heal|"
+		if rfsettings.raiddata.roles.heal == true and t == true then
+			heal = "/Heal"
+			h = true
+		elseif rfsettings.raiddata.roles.heal == true then
+			heal = "Heal"
+			h = true
 		end
 		
 		
-		if rfsettings.raiddata.roles.dps == true then
-			dps = "|DPS|"
+		if rfsettings.raiddata.roles.dps == true and (h == true or t == true) then
+			dps = "/DPS"
+			d = true
+		elseif rfsettings.raiddata.roles.dps == true then
+			dps = "DPS"
+			d = true
+		end
+			
+		
+		
+		if rfsettings.raiddata.roles.support == true and (d == true or h == true or t == true) then
+			support = "/Support"
+		elseif rfsettings.raiddata.roles.support == true then
+			support = "Support"
 		end
 		
+		local note = rfsettings.raiddata.note
 		
+		local groupsize = 0
 		
-		if rfsettings.raiddata.roles.support == true then
-			support = "|Support|"
+		if rfsettings.raiddata.raidtype == "wf" or rfsettings.raiddata.raidtype == "exp" then
+			groupsize = 5
+		elseif rfsettings.raiddata.raidtype == "tdq" or rfsettings.raiddata.raidtype == "ga" then
+			groupsize = 10
+		else
+			groupsize = 20
 		end
+		
+		local currentgroup = LibSRM.GroupCount()
+		
+		if currentgroup == 0 then 
+			currentgroup = 1
+		end		
+		
+		local room = (groupsize - currentgroup)
 		
 		local channel = frame.channeltext:GetText()
 			
-		local macro = (channel .. " [RaidFinder] LFM -" .. raid .. "- Need: " .. tank .. heal .. dps .. support .. "  Loot: " .. loot) 
+		local macro = (channel .. " [RaidFinder] LF" .. room .. "M for " .. raid .. ". Need: " .. tank .. heal .. dps .. support .. ".  Loot: " .. loot .. ". " .. note) 
 		
 		if (channel ~= nil and channel ~= "") then
 			frame.btRaidPost:SetSecureMode("restricted")
