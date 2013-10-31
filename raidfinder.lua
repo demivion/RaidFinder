@@ -162,15 +162,15 @@ function rf.settings()
 			roles = {tank = false, dps = false, heal = false, support = false},
 			achiev = {tdq = 0, ft = 0, ee = 0, ga = 0, ig = 0, pb = 0},
 			lookingfor = {tdq = false, ft = false, ee = false, ga = false, ig = false, pb = false, old = false, exp = false, drr = false, gh = false, sh = false, wb = false, wf = false, cq = false, misc = false},
-			note = "",
+			note = "Note.",
 			type = "",
 			},
 		raiddata = {
 			name = "",
-			raidtype = "",
-			loot = "",
+			raidtype = "MISC",
+			loot = "Open Roll",
 			roles = {tank = false, dps = false, heal = false, support = false},
-			note = "",
+			note = "Note.",
 			type = "",
 			channel = "",
 			size = "",
@@ -1802,7 +1802,29 @@ function rf.UI:setupInstructionsTab()
 					{ 	parent = nil,
 						title = ") Understanding the Status tab",
 						content = {	{	type = 'text',
-										text = 'The purpose of the status tab is to manage the back and forth communications between players and raids to streamline the invitation process. \n \n As a raid leader: applicants will need to be approved, then will need to confirm they are ready for an invite, then they can be invited. \n \n As a player: if a raid wants you, you will need to confirm you are ready, then they can invite you. \n \n Clicking the Deny/Clear button at any time will let the interested raid/player that you have declined and then will remove them from your status tab. If you have already been invited to a group the Deny/Clear button will simply remove them from your status tab.',
+										text = ("The purpose of the status tab is to manage the back and forth communications between players and raids to streamline the invitation process." ..
+										"\n\n<u>As a raid leader:</u>" ..
+										"\n<u>To Invite a Player:</u>" ..
+										"\n1. Leader selects player in player tab, clicks Apply to Invite." ..
+										"\n2. Player sees raids invite in the status tab and clicks Approve/Invite." .. 
+										"\n3. Player agrees that they are 100% ready for invite (aka not in group) by clicking Approve/Invite." .. 
+										"\n4. Leader sees players status as *Ready for Invite* and then clicks Approve/Invite." .. 
+										"\n5. Player gets invited." .. 
+										"\n<u>If a Player wants to Join:</u>" .. 
+										"\n1. Leader sees Players application in the status tab and clicks Approve/Invite." .. 
+										"\n2. Player agrees that they are 100% ready for invite (aka not in group) by clicking Approve/Invite." .. 
+										"\n3. Leader sees players status as *Ready for Invite* and then clicks Approve/Invite." .. 
+										"\n4. Player gets invited." .. 										
+										"\n\n<u>As a player:</u>" .. 
+										"\n<u>To Join a Raid:</u>" .. 
+										"\n1. Player selects raid in Raid Tab ..  click Apply to Join." .. 
+										"\n2. Leader will see your invite in the status tab and click Approve/Invite." .. 
+										"\n3. You will agree that you are 100% ready for invite (aka not in group) by clicking Approve/Invite." .. 
+										"\n4. You will then receive an invite shortly." .. 								
+										"\n<u>If a raid shows up in your status tab:</u>" .. 
+										"\n1. You will need to confirm you are 100% ready for invite." .. 
+										"\n2. You will receive an invite shortly." .. 
+										"\n\n Clicking the Deny/Clear button at any time will remove them from your status tab and remove you from their status tab.")
 									},
 								},
 					},
@@ -2376,6 +2398,7 @@ function rf.UI:setupPostTab()
 		local t = false
 		local h = false
 		local d = false
+		local s = false
 
 		if rfsettings.raiddata.roles.tank == true then
 			tank = "Tank"
@@ -2403,8 +2426,10 @@ function rf.UI:setupPostTab()
 		
 		if rfsettings.raiddata.roles.support == true and (d == true or h == true or t == true) then
 			support = "/Support"
+			s = true
 		elseif rfsettings.raiddata.roles.support == true then
 			support = "Support"
+			s = true
 		end
 		
 		local note = rfsettings.raiddata.note
@@ -2428,8 +2453,16 @@ function rf.UI:setupPostTab()
 		local room = (groupsize - currentgroup)
 		
 		local channel = frame.channeltext:GetText()
-			
-		local macro = (channel .. " [RaidFinder] LF" .. room .. "M for " .. raid .. ". Need: " .. tank .. heal .. dps .. support .. ".  Loot: " .. loot .. ". " .. note) 
+		
+		if room == 0 then room = "" end
+		
+		local need = ". Need: "
+		
+		if t == false and d == false and h == false and s == false then
+			need = ""
+		end
+		
+		local macro = (channel .. " [RaidFinder] LF" .. room .. "M for " .. raid .. need .. tank .. heal .. dps .. support .. ".  Loot: " .. loot .. ". " .. note) 
 		
 		if (channel ~= nil and channel ~= "") then
 			frame.btRaidPost:SetSecureMode("restricted")
@@ -3056,12 +3089,18 @@ function rf.PlayergridUpdate(frame, grid)
 				end
 			end
 			
-			local lfg = EnKai.tools.table.serialize (lfgtable)
+
+			local lfg = string.gsub(EnKai.tools.table.serialize (lfgtable), [["]], "")
+
 			
 			table.insert (thisValue, {key = k, value = lfg, color = {1,1,1,1}})
 
 			table.insert (thisValue, {key = k, value = v.note, color = {1,1,1,1}})
-
+			
+			for k,v in pairs(thisValue) do
+				if v.value == nil then v.value = "" end
+			end
+			
 			table.insert (values, thisValue)
 
 		end
@@ -3201,7 +3240,11 @@ function rf.RaidgridUpdate(frame, grid)
 			table.insert (thisValue, {key = k, value = v.note, color = {1,1,1,1}})
 			
 			table.insert (thisValue, {key = k, value = v.size, color = {1,1,1,1}})
-
+			
+			for k,v in pairs(thisValue) do
+				if v.value == nil then v.value = "" end
+			end
+			
 			table.insert (values, thisValue)
 
 

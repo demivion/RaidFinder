@@ -4,7 +4,7 @@ NameShort = "RF"
 Description = "A Raid Finder"
 Author = "Vexxx@Greybriar"
 Website = "http://www.curse.com/addons/rift/raidfinder"
-Version = "1.03"
+Version = "1.04"
 Email = "izlar@ufl.edu"
 Environment = "2.4"
 
