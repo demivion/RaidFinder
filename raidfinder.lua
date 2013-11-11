@@ -161,7 +161,8 @@ function rf.settings()
 		aButtonS = 1,
 		UIlock = false,
 		flash = true,
-		textnotify = false,
+		textnotify = true,
+		notifyme = false,
 		playerdata = {
 			name = "",
 			hit = 0,
@@ -174,7 +175,7 @@ function rf.settings()
 			},
 		raiddata = {
 			name = "",
-			raidtype = "MISC",
+			raidtype = "misc",
 			loot = "Open Roll",
 			roles = {tank = false, dps = false, heal = false, support = false},
 			note = "Note.",
