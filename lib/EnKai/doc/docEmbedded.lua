@@ -19,10 +19,12 @@ function EnKai.docEmbedded (name, parent)
 	grid:SetBodyHighlightColor(0.133, 0.133, 0.133, 1)
 	grid:SetLabelHighlightColor(1, 1, 1, 1)
 		
-	local cols = {	{ align = 'left', width = 300  } }	
+	local cols = {	{ align = 'left', width = 300  } }
+	local rows = 20
+	local width = 500	
 	
-	grid:SetVisible(true)
-	grid:Layout (cols, 20)
+	--grid:SetVisible(true)
+	--grid:Layout (cols, rows)
 	
 	-- grid slider
 		
@@ -43,8 +45,7 @@ function EnKai.docEmbedded (name, parent)
 	scrollPane:SetPoint("TOPLEFT", grid, "TOPRIGHT")
 	scrollPane:SetWidth(264)
 	scrollPane:SetHeight(grid:GetHeight())
-	
-	
+		
 	local body = UI.CreateFrame("Frame", name .. '.body', doc)
 	body:SetBackgroundColor(0, 0, 0, .6)
 	body:SetPoint("TOPLEFT", grid, "TOPRIGHT")
@@ -92,8 +93,8 @@ function EnKai.docEmbedded (name, parent)
 		grid:SetCellValues(gridValues)
 		grid:SetRowPos(1, false)
 		
-		if (#gridValues-20) > 0 then		
-			slider:SetRange (1, #gridValues-20+1)
+		if (#gridValues-rows) > 0 then		
+			slider:SetRange (1, #gridValues-rows+1)
 			slider:AdjustValue(1)
 			slider:SetVisible(true)			
 		else
@@ -261,17 +262,28 @@ function EnKai.docEmbedded (name, parent)
 	local oSetWidth = doc.SetWidth
 		
 	function doc:SetWidth(newWidth)
+		width = newWidth
 		oSetWidth(self, newWidth)
 		scrollPane:SetWidth(newWidth - grid:GetWidth())
 		body:SetWidth(scrollPane:GetWidth()-14)
 	end	
+	
+	function doc:Layout(newRows)
+		rows = newRows
+		grid:Layout (cols, rows)
+	end
 	
 	Command.Event.Attach(EnKai.events[name .. ".grid"].LeftClick, function (_, rowNo)
 		showChapter(grid:GetKey(rowNo))
 	end, name .. ".grid.LeftClick")
 	
 	Command.Event.Attach(EnKai.events[name .. ".grid"].GridFinished, function ()
-		doc:SetHeight(grid:GetHeight()+20)
+		doc:SetHeight(grid:GetHeight())
+		scrollPane:SetHeight(grid:GetHeight())
+		body:SetHeight(grid:GetHeight())		
+		doc:SetWidth(width)
+		
+		grid:SetVisible(true)
 		gridInit = true
 		updateGrid()
 	end, name .. ".grid.GridFinished")

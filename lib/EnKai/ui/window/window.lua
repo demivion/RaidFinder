@@ -50,7 +50,13 @@ function EnKai.ui.nkWindow(name, parent)
 	
 	dragFrame:EventAttach( Event.UI.Input.Mouse.Left.Up, function (self)	
 	    self.leftDown = false
+	    EnKai.eventHandlers[name]["Moved"](window:GetLeft(), window:GetTop())
 	end, name .. "dragFrame.Left.Up")
+	
+	dragFrame:EventAttach( Event.UI.Input.Mouse.Left.Upoutside, function (self)	
+	    self.leftDown = false
+	    EnKai.eventHandlers[name]["Moved"](window:GetLeft(), window:GetTop())
+	end, name .. "dragFrame.Left.Upoutside")
 	
 	btClose:SetSkin("close")
 	btClose:SetPoint("TOPRIGHT", window, "TOPRIGHT", -8, 15)
@@ -98,6 +104,9 @@ function EnKai.ui.nkWindow(name, parent)
 		
 	end 
 	
+	EnKai.eventHandlers[name] = {}
+	EnKai.events[name] = {}
+	EnKai.eventHandlers[name]["Moved"], EnKai.events[name]["Moved"] = Utility.Event.Create(addonInfo.identifier, name .. "Moved")
 	
 	return window
 	

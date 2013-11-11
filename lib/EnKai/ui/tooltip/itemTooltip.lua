@@ -32,6 +32,8 @@ function EnKai.ui.nkItemTooltip(name, parent)
 	local upgradeCount1 = UI.CreateFrame ('Text', name .. '.upgradeCount1', tooltipInner)
 	local upgradeItem2 = UI.CreateFrame ('Texture', name .. '.upgradeItem2', tooltipInner)
 	local upgradeCount2 = UI.CreateFrame ('Text', name .. '.upgradeCount2', tooltipInner)
+	local upgradeItem3 = UI.CreateFrame ('Texture', name .. '.upgradeItem3', tooltipInner)
+	local upgradeCount3 = UI.CreateFrame ('Text', name .. '.upgradeCount3', tooltipInner)
 	
 	local stats = {}
 	
@@ -142,6 +144,14 @@ function EnKai.ui.nkItemTooltip(name, parent)
 	upgradeCount2:SetFontColor(1, 1, 1, 1)
 	upgradeCount2:SetWordwrap(false)
 	
+	upgradeItem3:SetPoint("CENTERLEFT", upgradeCount2, "CENTERRIGHT", 2, 0)
+	upgradeItem3:SetWidth(16)
+	upgradeItem3:SetHeight(16)
+	
+	upgradeCount3:SetPoint("CENTERLEFT", upgradeItem3, "CENTERRIGHT", 2, 0)
+	upgradeCount3:SetFontColor(1, 1, 1, 1)
+	upgradeCount3:SetWordwrap(false)
+	
 	--level:SetPoint("TOPLEFT", dps, "BOTTOMLEFT")
 	level:SetFontSize(12)
 	level:SetFontColor (1,1,1,1)
@@ -226,19 +236,27 @@ function EnKai.ui.nkItemTooltip(name, parent)
 		if riftSlot ~= nil then
 		
 			itemTypeText = EnKai.items.getRessource ('itemTypeTranslation', riftSlot)
-			if string.find(itemTypeText, " ") == nil then
-				itemCat:SetText(itemTypeText)
-				itemType:SetText("")
+			
+			if itemTypeText == nil then
+				EnKai.tools.error.display (addonInfo.toc.Identifier, string.format("itemTooltip could not get item type for rift slot %s", riftSlot), 2)
+				itemCat:SetVisible(false)
+				itemType:SetVisible(false)
 			else
-				itemCat:SetText(EnKai.strings.leftBack (itemTypeText, " "))
-				itemType:SetText(EnKai.strings.rightBack(itemTypeText, " "))
-			end			
-		
-			itemCat:SetVisible(true)
-			itemType:SetVisible(true)
-		
-			height = height + itemCat:GetHeight() -4
-			object = itemCat
+			
+				if string.find(itemTypeText, " ") == nil then
+					itemCat:SetText(itemTypeText)
+					itemType:SetText("")
+				else
+					itemCat:SetText(EnKai.strings.leftBack (itemTypeText, " "))
+					itemType:SetText(EnKai.strings.rightBack(itemTypeText, " "))
+				end			
+			
+				itemCat:SetVisible(true)
+				itemType:SetVisible(true)
+			
+				height = height + itemCat:GetHeight() -4
+				object = itemCat
+			end
 		else
 			itemCat:SetVisible(false)
 			itemType:SetVisible(false)
@@ -460,6 +478,8 @@ function EnKai.ui.nkItemTooltip(name, parent)
 		upgradeCount1:SetVisible(false)
 		upgradeItem2:SetVisible(false)
 		upgradeCount2:SetVisible(false)
+		upgradeItem3:SetVisible(false)
+		upgradeCount3:SetVisible(false)
 
 		if itemLibDetails ~= nil then
 		
@@ -475,6 +495,7 @@ function EnKai.ui.nkItemTooltip(name, parent)
 				
 					for k, v in pairs (itemLibDetails.cost) do
 						local upgradeItemDetails = nkItemBase.Query.byKey(k, false, "consumable", false)
+						if upgradeItemDetails == nil then upgradeItemDetails = nkItemBase.Query.byKey(k, false, nil, false) end
 					
 						if upgradeItemDetails ~= nil then
 							if counter == 1 then
@@ -482,11 +503,16 @@ function EnKai.ui.nkItemTooltip(name, parent)
 								upgradeCount1:SetText(tostring(v))
 								upgradeItem1:SetVisible(true)
 								upgradeCount1:SetVisible(true)
-							else
+							elseif counter == 2 then
 								upgradeItem2:SetTextureAsync("Rift", string.format('Data/\\UI\\item_icons\\%s.dds', upgradeItemDetails.icon))
 								upgradeCount2:SetText(tostring(v))											
 								upgradeItem2:SetVisible(true)
 								upgradeCount2:SetVisible(true)
+							else
+								upgradeItem3:SetTextureAsync("Rift", string.format('Data/\\UI\\item_icons\\%s.dds', upgradeItemDetails.icon))
+								upgradeCount3:SetText(tostring(v))											
+								upgradeItem3:SetVisible(true)
+								upgradeCount3:SetVisible(true)
 							end
 							
 							counter = counter + 1
@@ -498,7 +524,7 @@ function EnKai.ui.nkItemTooltip(name, parent)
 					y = 5
 				end 
 				
-			elseif itemLibDetails.cost ~= nil then
+			elseif itemLibDetails.cost ~= nil and type(itemLibDetails.cost) ~= 'string' then
 				y = 10
 				costLabel:SetVisible(true)
 				costLabel:SetPoint("TOPLEFT", object, "BOTTOMLEFT", 0, y)

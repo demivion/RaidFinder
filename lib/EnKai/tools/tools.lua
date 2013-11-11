@@ -324,7 +324,7 @@ end
 function EnKai.tools.various.getSystemVersion ()
 
 	local version = Inspect.System.Version()
-	local tempArray = version.internal:split('-')
+	local tempArray = EnKai.strings.split(version.internal,'-')
 	
 	return tempArray[2]
 

@@ -8,8 +8,10 @@ rf.uiElements.context = UI.CreateContext("RaidFinder")
 rf.uiElements.context:SetSecureMode("restricted")
 
 rf.needsbroadcast = false
+rf.needstext = false
 rf.needsupdate = {}
 rf.lastbroadcast = 0
+rf.lasttext = 0
 rf.lastupdate = {}
 rf.updateindex = 0
 rf.broadcastdata = ""
@@ -20,11 +22,15 @@ rf.playerframe = {}
 rf.raidframe = {}
 rf.statusframe = {}
 rf.secure = false
-rf.flashing = false
+rf.statusflash = false
+rf.statustext = false
+rf.raidflash = false
+rf.raidtext = false
 rf.activetab = 1
 rf.dialog = false
 rf.debug = false
 rf.EU = nil
+rf.alerttext = ""
 
 RaidFinder.gridData = {
 	headers = {	
@@ -155,6 +161,7 @@ function rf.settings()
 		aButtonS = 1,
 		UIlock = false,
 		flash = true,
+		textnotify = false,
 		playerdata = {
 			name = "",
 			hit = 0,
@@ -239,7 +246,7 @@ function rf.channelcheck()
 	local consoles = {}
 	local detail = {}
 	local crossevents = false
-	local shard = Inspect.Shard().name
+	local shard = string.lower(Inspect.Shard().name)
 
 	
 	consoles = Inspect.Console.List()
@@ -248,21 +255,22 @@ function rf.channelcheck()
 		detail = Inspect.Console.Detail(k).channel
 		if detail ~= nil then
 		
-			if (shard == 'Faeblight' or shard == 'Laethys' or shard == 'Hailol' or shard == 'Wolfsbane' or shard == 'Deepwood' or shard == 'Greybriar' or shard == 'Seastone') then rf.EU = false end
-			if (shard == 'Bloodiron' or shard == 'Brutwacht' or shard == 'Trübkopf' or shard == 'Brutmutter' or shard == 'Brisesol' or shard == 'Phynnious' or shard == 'Gelidra' or shard == 'Zaviel') then rf.EU = true end
+			if (shard == 'faeblight' or shard == 'laethys' or shard == 'hailol' or shard == 'wolfsbane' or shard == 'deepwood' or shard == 'greybriar' or shard == 'seastone') then rf.EU = false end
+			if (shard == 'bloodiron' or shard == 'brutwacht' or shard == 'trübkopf' or shard == 'brutmutter' or shard == 'brisesol' or shard == 'phynnious' or shard == 'gelidra' or shard == 'zaviel') then rf.EU = true end
 			
 			for k2,v2 in pairs(detail) do
-			
-
-				if ((shard == 'Faeblight' or shard == 'Brutwacht') and (k2 == 'crossevents' or k2 == 'CrossEvents') and v2 == true) then
+				
+				local channel = string.lower(k2)
+				
+				if ((shard == 'faeblight' or shard == 'brutwacht') and channel == 'crossevents' and v2 == true) then
 					crossevents = true
 
 					break
-				elseif (rf.EU == false and (k2 == 'CrossEvents@Faeblight' or k2 == 'crossevents@Faeblight') and v2 == true) then
+				elseif (rf.EU == false and channel == 'crossevents@faeblight' and v2 == true) then
 					crossevents = true
 
 					break
-				elseif (rf.EU == true and (k2 == 'crossevents@Brutwacht' or k2 == 'CrossEvents@Brutwacht') and v2 == true) then
+				elseif (rf.EU == true and channel == 'crossevents@brutwacht' and v2 == true) then
 					crossevents = true
 
 					break
@@ -285,28 +293,53 @@ function rf.channelcheck()
 	
 end
 
-function rf.flashs()
-	if rf.activetab == 4 and rf.visible == true then rf.flashing = false end
-	if rf.flashing then
+function rf.alerts(now)	
+
+	if rfsettings.textnotify == true then	
+		if rf.lasttext == 0 then
+			rf.lasttext = now
+		elseif now - rf.lasttext < 15 then
+			rf.needstext = false
+		elseif now - rf.lasttext >= 15 then
+			rf.needstext = true		
+		end
+	end
+
+	if (rfsettings.textnotify == true and (rf.raidtext == true or rf.statustext == true) and rf.needstext == true) then
+		print(rf.alerttext)
+		rf.lasttext = now
+	end
+		
+	if rf.activetab == 4 and rf.visible == true then 
+		rf.statusflash = false
+		rf.statustext = false
+		end
+		
+	if rf.activetab == 2 and rf.visible == true then
+		rf.raidflash = false
+		rf.raidtext = false
+	end
+	
+	if ((rf.statusflash or rf.raidflash) and rfsettings.flash) then
 		rf.UI.flashtexture:SetAlpha(math.abs(math.sin(string.sub(string.format("%.1f",Inspect.Time.Frame()), -3))))
-		Command.System.Flash(true)
+		Command.System.Flash(true)		
 	else
 		rf.UI.flashtexture:SetAlpha(0)
-		Command.System.Flash(false)
+		Command.System.Flash(false)		
 	end
+	
 end
 
 function rf.onupdate()
-	rf.flashs()
 	local now = Inspect.Time.Frame()
+	
+	rf.alerts(now)
 	
 	if rf.lastbroadcast == 0 then
 		rf.lastbroadcast = now
-	elseif now - rf.lastbroadcast < 15 
-	then
+	elseif now - rf.lastbroadcast < 15 then
 		rf.needsbroadcast = false
-	elseif now - rf.lastbroadcast >= 15 
-	then
+	elseif now - rf.lastbroadcast >= 15 then
 		rf.needsbroadcast = true		
 	end
 	
@@ -900,7 +933,7 @@ function rf.approve(type, name)
 		
 
 			
-
+--[[
 		if rf.gridData.playerappdata[name].status == "Accept Player?" then
 
 			local data = rfsettings.raiddata
@@ -917,20 +950,35 @@ function rf.approve(type, name)
 		
 		rf.gridData.playerappdata[name].status = "Confirming..."
 
-		elseif rf.gridData.playerappdata[name].status == "Ready for Invite!" or rf.gridData.playerappdata[name].status == "Invite Sent." then
+		elseif rf.gridData.playerappdata[name].status == "Ready for Invite!" or rf.gridData.playerappdata[name].status == "Invite Sent." then --]]
+
+		if rf.gridData.playerappdata[name].status == "Accept Player?" or rf.gridData.playerappdata[name].status == "Invite Sent." or rf.gridData.playerappdata[name].status == "Ready for Invite!" then
+		
+			local macro = ("invite " .. name)
+			if rf.debug then print(macro) end
+				rf.UI.frame.paneStatusTab.approveButton:EventMacroSet(Event.UI.Input.Mouse.Left.Click, macro)
+				rf.gridData.playerappdata[name].status = "Invite Sent."
+			
+			end
+		
+		
+			local data = rfsettings.raiddata
+			
+			data.status = "Invite has been sent!"
+			
+			data.type = "raidApplying"
+			local serialized = Utility.Serialize.Inline(data)
+			local compressed = zlib.deflate()(serialized, "finish")
 
 		
-		local macro = ("invite " .. name)
-		if rf.debug then print(macro) end
-		rf.UI.frame.paneStatusTab.approveButton:EventMacroSet(Event.UI.Input.Mouse.Left.Click, macro)
-		rf.gridData.playerappdata[name].status = "Invite Sent."
+			rf.send(name, compressed)		
 		
-		end
 		
-		if rf.statusframe.grid ~= nil then
+		
+			if rf.statusframe.grid ~= nil then
 
-			rf.StatusgridUpdate(rf.UI.frame.paneStatusTab, rf.statusframe.grid)	
-		end
+				rf.StatusgridUpdate(rf.UI.frame.paneStatusTab, rf.statusframe.grid)	
+			end
 		
 		
 	
@@ -948,11 +996,19 @@ function rf.approve(type, name)
 			rf.send(name, compressed)	
 
 			rf.gridData.raidappdata[name].status = "Waiting on Invite..."
+			
+			local macro = ("partyleave")
+			if rf.debug then print(macro) end
+			rf.UI.frame.paneStatusTab.approveButton:EventMacroSet(Event.UI.Input.Mouse.Left.Click, macro)
 	
 			
-			rf.UI.frame.paneStatusTab.dialog:SetVisible(true)
-			
-			
+			--rf.UI.frame.paneStatusTab.dialog:SetVisible(true)
+		
+--[[		elseif rf.gridData.raidappdata[name].status == "Invite has been sent!" then
+		
+			local macro = ("partyleave")
+			if rf.debug then print(macro) end
+			rf.UI.frame.paneStatusTab.approveButton:EventMacroSet(Event.UI.Input.Mouse.Left.Click, macro)		--]]	
 			
 		end
 		
@@ -971,6 +1027,7 @@ function rf.receive(from, type, channel, identifier, incoming)
 	local shard = Inspect.Shard().name
 	local name = (player .. "@" .. shard)
 	local accept = false
+	local raids = {}
 	
 	local now = Inspect.Time.Frame()
 	if identifier == "raidfinder" then
@@ -1009,6 +1066,21 @@ function rf.receive(from, type, channel, identifier, incoming)
 												}
 				
 			elseif data.type == "raid" then
+			
+						
+				if rf.gridData.raiddata[data.name] == nil and rfsettings.notifyme == true and rf.broadcasttype == "player" and rf.broadcasting == true then
+					for k,v in pairs(rfsettings.playerdata.lookingfor) do
+						if v == true then
+							if data.raidtype == k then
+								if rfsettings.flash == true then rf.raidflash = true end
+								if rfsettings.textnotify == true then 
+									rf.raidtext = true
+									rf.alerttext = "Raid Forming that you might be interested in."
+								end
+							end
+						end
+					end						
+				end
 
 				rf.gridData.raiddata[data.name] = {
 												name = data.name,
@@ -1019,15 +1091,26 @@ function rf.receive(from, type, channel, identifier, incoming)
 												time = now,
 												size = data.size,
 												}
-												
+											
 			elseif data.type == "raidApplying" then
 						if rf.gridData.raidappdata[data.name] == nil then
-							if rfsettings.flash then rf.flashing = true end
+							if rfsettings.flash then rf.statusflash = true end
+							if rfsettings.textnotify then 
+								rf.statustext = true
+								rf.alerttext = "New Raid Invite"
+							end								
 						elseif rf.gridData.raidappdata[data.name].status ~= data.status then 
-							if rfsettings.flash then rf.flashing = true end
+							if rfsettings.flash then rf.statusflash = true end
+							if rfsettings.textnotify then 
+								rf.statustext = true
+								rf.alerttext = "Raid's Status Updated"
+							end 
 						end
 						
-						if data.status == "Declined." then rf.flashing = false end
+						if data.status == "Declined." then
+							rf.statusflash = false
+							rf.statustext = false
+						end
 						
 						rf.gridData.raidappdata[data.name] = {
 												name = data.name,
@@ -1041,13 +1124,24 @@ function rf.receive(from, type, channel, identifier, incoming)
 						if rf.debug then print(data.name, "status =", rf.gridData.raidappdata[data.name].status) end
 												
 			elseif data.type == "playerApplying" then
-						if rf.gridData.playerappdata[data.name] == nil and rfsettings.flash then 
-							rf.flashing = true 
-						elseif rf.gridData.playerappdata[data.name].status ~= data.status and rfsettings.flash then 
-							rf.flashing = true
-						end
+						if rf.gridData.playerappdata[data.name] == nil then 
+							if rfsettings.flash then rf.statusflash = true end
+							if rfsettings.textnotify then 
+								rf.statustext = true
+								rf.alerttext = "New Player Join Request"
+							end
+						elseif rf.gridData.playerappdata[data.name].status ~= data.status then 
+							if rfsettings.flash then rf.statusflash = true end
+							if rfsettings.textnotify then 
+								rf.statustext = true
+								rf.alerttext = "Player's Status Updated"
+							end
+						end						
 						
-						if data.status == "Declined." then rf.flashing = false end
+						if data.status == "Declined." then 
+							rf.statusflash = false
+							rf.statustext = false
+						end
 						
 						rf.gridData.playerappdata[data.name] = {
 												name = data.name,
@@ -1070,6 +1164,23 @@ function rf.receive(from, type, channel, identifier, incoming)
 	end
 
 end
+--[[
+function rf.raidfound(name)
+
+
+	local raid = ""
+	for k2,v2 in pairs(name) do
+		for k,v in pairs(rf.gridData.selection["RaidType"]) do
+			if EnKai.tools.table.isMember(v, v2) then
+				raid = rf.gridData.selection["RaidType"][k].label
+				print(raid .. " Raid Forming.")
+			end
+		end
+	end
+
+end
+--]]
+
 
 --UI
 
@@ -1091,7 +1202,15 @@ function rf.open()
 		rf.UI.frame.panePostTab.btRaidPost:SetVisible(true)
 	end	
 	
-	if rf.activetab == 4 then rf.flashing = false end
+	if rf.activetab == 4 then
+		rf.statusflash = false
+		rf.statustext = false
+	end
+	if rf.activetab == 2 then 
+		rf.raidflash = false
+		rf.raidtext = false
+	end
+	
 	
 end
 
@@ -1693,7 +1812,8 @@ function rf.UI:setupSettingsTab()
 			rfsettings.UIlock = false
 		end
 	end, 'cblock.CheckboxChanged')
-		--flash
+		
+	--flash
 	frame.flashCheckbox = EnKai.uiCreateFrame("nkCheckbox", 'cbflash', frame.SettingsBG)
 	frame.flashCheckbox:SetText("Enable Button Flash")
 	frame.flashCheckbox:SetChecked(rfsettings.flash)
@@ -1712,6 +1832,24 @@ function rf.UI:setupSettingsTab()
 		end
 	end, 'cbflash.CheckboxChanged')
 	
+	--text
+	frame.textCheckbox = EnKai.uiCreateFrame("nkCheckbox", 'cbtext', frame.SettingsBG)
+	frame.textCheckbox:SetText("Enable Text-based Alerts")
+	frame.textCheckbox:SetChecked(rfsettings.textnotify)
+	frame.textCheckbox:SetPoint("TOPLEFT", frame.flashCheckbox, "TOPLEFT", 0, 30)
+	frame.textCheckbox:SetColor (0.925, 0.894, 0.741, 1 )
+	frame.textCheckbox:SetLabelColor(0.925, 0.894, 0.741, 1 )
+	frame.textCheckbox:SetLayer(2)
+	frame.textCheckbox:SetLabelInFront(false)
+	frame.textCheckbox:AutoSizeLabel()
+	
+	Command.Event.Attach(EnKai.events['cbtext'].CheckboxChanged, function (_, newValue)
+		if frame.textCheckbox:GetChecked() == true then
+			rfsettings.textnotify = true
+		else
+			rfsettings.textnotify = false
+		end
+	end, 'cbtext.CheckboxChanged')
 	
 	--close
 											
@@ -1734,7 +1872,8 @@ function rf.UI:setupInstructionsTab()
 	
 	instmanual:SetPoint("TOPLEFT", frame, "TOPLEFT",7,35)
 	instmanual:SetWidth(925)
-	instmanual:SetHeight(410)
+	
+	instmanual:Layout(21)
 		
 	local manual = { { 	parent = nil,
 						title = ") Adjusting the UI",
@@ -1807,24 +1946,24 @@ function rf.UI:setupInstructionsTab()
 										"\n<u>To Invite a Player:</u>" ..
 										"\n1. Leader selects player in player tab, clicks Apply to Invite." ..
 										"\n2. Player sees raids invite in the status tab and clicks Approve/Invite." .. 
-										"\n3. Player agrees that they are 100% ready for invite (aka not in group) by clicking Approve/Invite." .. 
-										"\n4. Leader sees players status as *Ready for Invite* and then clicks Approve/Invite." .. 
-										"\n5. Player gets invited." .. 
-										"\n<u>If a Player wants to Join:</u>" .. 
-										"\n1. Leader sees Players application in the status tab and clicks Approve/Invite." .. 
-										"\n2. Player agrees that they are 100% ready for invite (aka not in group) by clicking Approve/Invite." .. 
+										--"\n3. Player agrees that they are 100% ready for invite (aka not in group) by clicking Approve/Invite." .. 
 										"\n3. Leader sees players status as *Ready for Invite* and then clicks Approve/Invite." .. 
-										"\n4. Player gets invited." .. 										
+										"\n4. Player gets invited." .. 
+										"\n<u>If a Player wants to Join you:</u>" .. 
+										"\n1. Leader sees Players application in the status tab and clicks Approve/Invite." .. 
+										--"\n2. Player agrees that they are 100% ready for invite (aka not in group) by clicking Approve/Invite." .. 
+										--"\n3. Leader sees players status as *Ready for Invite* and then clicks Approve/Invite." .. 
+										"\n2. Player gets invited." .. 										
 										"\n\n<u>As a player:</u>" .. 
 										"\n<u>To Join a Raid:</u>" .. 
 										"\n1. Player selects raid in Raid Tab ..  click Apply to Join." .. 
 										"\n2. Leader will see your invite in the status tab and click Approve/Invite." .. 
-										"\n3. You will agree that you are 100% ready for invite (aka not in group) by clicking Approve/Invite." .. 
-										"\n4. You will then receive an invite shortly." .. 								
-										"\n<u>If a raid shows up in your status tab:</u>" .. 
-										"\n1. You will need to confirm you are 100% ready for invite." .. 
-										"\n2. You will receive an invite shortly." .. 
-										"\n\n Clicking the Deny/Clear button at any time will remove them from your status tab and remove you from their status tab.")
+										--"\n3. You will agree that you are 100% ready for invite (aka not in group) by clicking Approve/Invite." .. 
+										"\n3. You will then receive an invite shortly." .. 								
+										"\n<u>If a raid wants to invite you:</u>" .. 
+										"\n1. You will click Approve/Invite if you want to join them." .. 
+										"\n2. Leader will see you as Ready for Invite and you will receive an invite shortly." .. 
+										"\n\n Clicking the Deny/Clear button at any time will remove them from your status tab and remove you from their status tab silently.")
 									},
 								},
 					},
@@ -1852,8 +1991,6 @@ function rf.UI:setupInstructionsTab()
 	end, "RaidTabClose.Left.Click")
 	
 end
-
-
 
 function rf.UI:setupPostTab()
 	rf.playerdata()
@@ -2181,7 +2318,19 @@ function rf.UI:setupPostTab()
 	frame.noteinfo:SetType("info")
 	frame.noteinfo:SetText("Press 'Enter' to save note.")
 	frame.noteinfo:SetWidth(200)
+
+	frame.notifyme = EnKai.uiCreateFrame("nkCheckbox", 'notifyme', frame.PostPlayerBG)
+	frame.notifyme:SetText("Notify me if a raid forms that I'm interested in.")
+	frame.notifyme:SetChecked(rfsettings.notifyme)
+	frame.notifyme:SetPoint("TOPLEFT", frame.noteinfo, "BOTTOMLEFT", 35, 35)
+	frame.notifyme:SetColor (0.925, 0.894, 0.741, 1 )
+	frame.notifyme:SetLabelColor(1, 1, 1, 1 )
+	frame.notifyme:SetLayer(2)
+	frame.notifyme:SetLabelWidth(285)
+	--frame.notifyme:SetLabelInFront(false)
 	
+	Command.Event.Attach(EnKai.events['notifyme'].CheckboxChanged, function (_, newValue) rf.lookingforupdate(frame) end, 'notifyme.CheckboxChanged')
+
 	--PlayerPost button
 	
 	
@@ -2914,7 +3063,6 @@ function rf.StatusgridUpdate(frame, grid)
 
 end
 
-
 function rf.lookingforupdate(frame)
 
 
@@ -2936,6 +3084,8 @@ function rf.lookingforupdate(frame)
 	rfsettings.playerdata.lookingfor.wf = frame.LFWF:GetChecked()
 	rfsettings.playerdata.lookingfor.cq = frame.LFCQ:GetChecked()
 	rfsettings.playerdata.lookingfor.misc = frame.LFMISC:GetChecked()
+	
+	rfsettings.notifyme = frame.notifyme:GetChecked()
 	
 	rfsettings.playerdata.roles.tank = frame.tank:GetChecked()
 	rfsettings.playerdata.roles.heal = frame.heal:GetChecked()

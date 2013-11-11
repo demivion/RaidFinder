@@ -407,17 +407,21 @@ function EnKai.ui.nkGrid(name, parent)
 	
 	function grid:UpdateGrid()
 		
+		if LayoutRows == nil then return end
+		
 		for idx = rowPos, rowPos + ( rows -1 ), 1 do
 			local v = cellValues[idx]
 			
 			if v == nil then
-				for idx2 = 1, #LayoutRows[idx - rowPos + 1], 1 do
-					local cell = LayoutRows[idx - rowPos + 1][idx2]
-					cell:SetBodyColor (bodyColor[1], bodyColor[2], bodyColor[3], bodyColor[4])
-					if cell:IsTexture() == true then
-						cell:SetVisible(false)
-					else
-						cell:SetText('')
+				if LayoutRows[idx - rowPos + 1] ~= nil then			
+					for idx2 = 1, #LayoutRows[idx - rowPos + 1], 1 do
+						local cell = LayoutRows[idx - rowPos + 1][idx2]
+						cell:SetBodyColor (bodyColor[1], bodyColor[2], bodyColor[3], bodyColor[4])
+						if cell:IsTexture() == true then
+							cell:SetVisible(false)
+						else
+							cell:SetText('')
+						end
 					end
 				end
 			else
@@ -478,6 +482,8 @@ function EnKai.ui.nkGrid(name, parent)
 	-- row highlighting --
 	
 	function grid:RowHighlight (row, active)
+		if LayoutRows == nil or LayoutRows[row] == nil then return end 
+	
 		for idx = 1, #LayoutRows[row], 1 do
 		
 			local cell = LayoutRows[row][idx]		

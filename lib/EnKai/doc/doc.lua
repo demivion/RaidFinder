@@ -9,8 +9,9 @@ function EnKai.doc (name, parent)
 	
 	local docEmbedded = EnKai.docEmbedded(name .. '.doc', doc)
 	docEmbedded:SetPoint("TOPLEFT", doc:GetContent(), "TOPLEFT")
+	docEmbedded:Layout(20)
 	
-	doc:SetHeight(docEmbedded:GetHeight() + 20)			
+	doc:SetHeight(docEmbedded:GetHeight() + 20)	
 	
 	local oSetWidth, oSetHeight = doc.SetWidth, doc.SetHeight
 		

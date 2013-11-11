@@ -10,6 +10,7 @@ function EnKai.events.updateHandler()
 
 	EnKai.coroutines.process ()
 	EnKai.fx.process()
+	--EnKai.uiGarbageCollector () -- missing SetName() on frames to fully build this
 
 end
 

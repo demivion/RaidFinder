@@ -72,7 +72,7 @@ function EnKai.ui.nkWindowModern(name, parent)
 	header:EventAttach(Event.UI.Input.Mouse.Cursor.Out, function (self)
 		if autoHide == true then EnKai.fx.updateTime (name .. '.autohide' ) end		
 	end, name .. ".body.Mouse.Cursor.Out")
-	
+
 	title:SetPoint("CENTER", header, "CENTER")
 	title:SetFontColor(0.925, 0.894, 0.741, 1)
 	title:SetFontSize(16)

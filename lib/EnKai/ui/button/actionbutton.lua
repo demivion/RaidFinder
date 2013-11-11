@@ -71,16 +71,6 @@ function EnKai.ui.nkActionButton(name, parent)
 	
 	function button:SetPoint(from, object, to, x, y)
 	
-		if x ~= nil then			
-			if x < 0 then x = 0 end
-			if x + button:GetWidth() > UIParent:GetWidth() then x = UIParent:GetWidth() - button:GetWidth() end
-		end
-		
-		if y ~= nil then
-			if y < 0 then y = 0 end
-			if y + button:GetHeight() > UIParent:GetHeight() then y = UIParent:GetHeight() - button:GetHeight() end
-		end
-		
 		if x ~= nil and y ~= nil then			
 			oSetPoint(self, from, object, to, x, y)
 		else

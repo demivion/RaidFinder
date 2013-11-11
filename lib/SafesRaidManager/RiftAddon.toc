@@ -28,3 +28,7 @@ Dependencies = {
 -- X-Curse-Project-Name: Safe's Raid Manager
 -- X-Curse-Project-ID: safes-raid-manager
 -- X-Curse-Repository-ID: rift/safes-raid-manager/mainline
+-- X-Curse-Packaged-Version: v1.04
+-- X-Curse-Project-Name: RaidFinder
+-- X-Curse-Project-ID: raidfinder
+-- X-Curse-Repository-ID: rift/raidfinder/mainline
